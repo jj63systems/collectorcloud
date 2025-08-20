@@ -97,6 +97,25 @@ return [
             'sslmode' => 'prefer',
         ],
 
+            'tenant' => [
+                'driver' => 'pgsql',
+                'database' => null,
+                'host' => '127.0.0.1',
+                'username' => 'postgres',
+                'password' => '',
+                // And other options if needed ...
+            ],
+
+            'landlord' => [
+                'driver' => 'pgsql',
+                'database' => 'landlord',
+                'host' => '127.0.0.1',
+                'username' => 'postgres',
+                'password' => '',
+                // And other options if needed ...
+            ],
+
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
