@@ -44,12 +44,13 @@ class AppPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
-                NeedsTenant::class,
+                NeedsTenant::class, //spatie
 
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                EnsureValidTenantSession::class,
+                
+                EnsureValidTenantSession::class, //spatie
 
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
