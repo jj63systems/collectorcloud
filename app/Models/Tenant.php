@@ -3,12 +3,16 @@
 namespace App\Models;
 
 use App\Services\DatabaseManager;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Spatie\Multitenancy\Models\Tenant as BaseTenant;
 
 
 class Tenant extends BaseTenant
 {
+
+//    use UsesLandlordConnection;
 
     protected $fillable = [
         'id',
@@ -23,6 +27,9 @@ class Tenant extends BaseTenant
         static::creating(fn(Tenant $model) => $model->createDatabase());
         // Delete the tenant database after the Tenant record is deleted
         static::deleted(fn(Tenant $model) => $model->dropDatabase());
+        // run all tenant migrations
+        static::created(fn(Tenant $model) => $model->runMigrations());
+
     }
 
     public function createDatabase(): void
@@ -42,21 +49,39 @@ class Tenant extends BaseTenant
         }
     }
 
+
     public function dropDatabase(): void
     {
         $dbName = $this->database ?? $this->id;
 
         if (!$dbName) {
-            Log::warning("No database name set for tenant ID {$this->id}. Skipping drop.");
-            return;
+            $message = "No database name set for tenant ID {$this->id}.";
+            Log::warning($message);
+            throw new RuntimeException($message);
         }
 
         $manager = app(DatabaseManager::class);
         $success = $manager->dropDatabase($dbName);
 
         if (!$success) {
-            Log::warning("Failed to drop database for tenant: $dbName");
+            $message = "Failed to drop database for tenant: {$dbName}";
+            Log::error($message);
+            throw new RuntimeException($message); // Propagate to caller
         }
+    }
+
+
+    public function runMigrations(): void
+    {
+        // Set the tenant as the current tenant — switches DB connection
+        $this->makeCurrent();
+
+        // Run migrations on the tenant DB
+        Artisan::call('migrate', [
+            '--path' => 'database/migrations/tenant',
+            '--database' => 'tenant', // this must match your config/database.php connection
+            '--force' => true,
+        ]);
     }
 
 
