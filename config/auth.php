@@ -40,7 +40,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'tenant' => [ // <- used by Filament App Panel for tenant login
+            'driver' => 'session',
+            'provider' => 'tenant_users',
+        ],
     ],
+
 
     /*
     |--------------------------------------------------------------------------
@@ -65,10 +71,10 @@ return [
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
-        // 'users' => [
-        //     'driver' => 'database',
-        //     'table' => 'users',
-        // ],
+        'tenant_users' => [ // <- points to tenant-specific model
+            'driver' => 'eloquent',
+            'model' => App\Models\tenant\TenantUser::class,
+        ],
     ],
 
     /*
