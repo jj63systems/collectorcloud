@@ -68,6 +68,6 @@ class AppPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->viteTheme('resources/css/filament/app/theme.css'); // update with your theme path
-        
+
     }
 }
