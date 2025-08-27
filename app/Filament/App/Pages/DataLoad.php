@@ -87,24 +87,26 @@ class DataLoad extends Page implements HasForms
                     ->schema([
                         TextEntry::make('data.analysis_summary')
                             ->label('What the data appears to represent')
-                            ->state(fn() => $this->data['status'] === 'complete'
-                                ? $this->data['analysis_summary']
-                                : '<span class="animate-pulse text-gray-500">Analysing...</span>')
+                            ->state(fn() => $this->data['analysis_summary'])
+                            ->hidden(fn() => $this->data['status'] !== 'complete')
                             ->html(),
 
                         TextEntry::make('data.analysis_columns')
                             ->label('Columns and their likely meanings')
-                            ->state(fn() => $this->data['status'] === 'complete'
-                                ? nl2br(e($this->data['analysis_columns']))
-                                : '<span class="animate-pulse text-gray-400">Awaiting analysis...</span>')
+                            ->state(fn() => nl2br(e($this->data['analysis_columns'])))
+                            ->hidden(fn() => $this->data['status'] !== 'complete')
                             ->html(),
 
                         TextEntry::make('data.analysis_issues')
                             ->label('Validation issues')
-                            ->state(fn() => $this->data['status'] === 'complete'
-                                ? nl2br(e($this->data['analysis_issues']))
-                                : '<span class="animate-pulse text-gray-400">Checking for issues...</span>')
+                            ->state(fn() => nl2br(e($this->data['analysis_issues'])))
+                            ->hidden(fn() => $this->data['status'] !== 'complete')
                             ->html(),
+
+                        TextEntry::make('data.analysis_loader')
+                            ->state('⏳ Analysing file, please wait...')
+                            ->visible(fn() => $this->data['status'] !== 'complete')
+                            ->extraAttributes(['class' => 'animate-pulse text-gray-500']),
                     ])
             ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
         ];
@@ -229,7 +231,8 @@ PROMPT;
     {
         \Log::info('Starting processUploadAndAnalyse', ['rawAttachment' => $this->attachment]);
 
-        $this->resetAnalysisFields(); // ✅ Clear fields before analysis begins
+        $this->resetAnalysisFields();
+
         $upload = is_array($this->attachment) ? reset($this->attachment) : $this->attachment;
 
         if (!$upload instanceof TemporaryUploadedFile) {
@@ -251,16 +254,7 @@ PROMPT;
             'storedPath' => $storedPath,
         ]);
 
-        // ✅ Reset data to show fresh analysis starting
-        $this->data = [
-            'status' => 'analysing',
-            'analysis_summary' => '⏳ Analysing...',
-            'analysis_columns' => '',
-            'analysis_issues' => '',
-        ];
-
         $this->dispatch('nextWizardStep');
-
         $this->analyseUploadedFile($storedPath);
     }
 
@@ -272,9 +266,11 @@ PROMPT;
 
     protected function resetAnalysisFields(): void
     {
-        $this->data['status'] = 'analysing';
-        $this->data['analysis_summary'] = 'Analysing...';
-        $this->data['analysis_columns'] = '';
-        $this->data['analysis_issues'] = '';
+        $this->data = [
+            'status' => 'analysing',
+            'analysis_summary' => '⏳ Analysing...',
+            'analysis_columns' => '',
+            'analysis_issues' => '',
+        ];
     }
 }
