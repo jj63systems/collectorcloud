@@ -4,9 +4,11 @@ namespace App\Filament\App\Pages;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Wizard;
@@ -46,11 +48,41 @@ class DataLoad extends Page implements HasForms
                         $livewire->processUploadOnNext($state);
                     }),
 
+
                 Step::make('Review')
                     ->schema([
-                        Textarea::make('data.analysis_summary')->label('What the data appears to represent')->disabled(),
-                        Textarea::make('data.analysis_columns')->label('Columns and their likely meanings')->disabled(),
-                        Textarea::make('data.analysis_issues')->label('Validation issues')->disabled(),
+                        TextEntry::make('data.analysis_summary')
+                            ->label('What the data appears to represent')
+                            ->state(fn() => $this->data['analysis_summary'] ?? '')
+                            ->html()
+                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
+
+                        TextEntry::make('data.analysis_columns')
+                            ->label('Columns and their likely meanings')
+                            ->state(function (): string {
+                                $raw = $this->data['analysis_columns'] ?? '';
+                                $lines = explode("\n", $raw);
+
+                                return collect($lines)->map(function ($line) {
+                                    if (preg_match('/^(.*?):\s*(.*)$/', $line, $m)) {
+                                        $col = trim($m[1]);
+                                        $desc = trim($m[2]);
+                                        return "<strong>{$col}</strong>: {$desc}";
+                                    }
+                                    return e($line);
+                                })->implode('<br>');
+                            })
+                            ->html()
+                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
+
+                        TextEntry::make('data.analysis_issues')
+                            ->label('Validation issues')
+                            ->state(function (): string {
+                                $raw = $this->data['analysis_issues'] ?? '';
+                                return nl2br(e($raw));
+                            })
+                            ->html()
+                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
                     ]),
             ])->submitAction(
                 Action::make('submit')->label('Submit')->action('submit')
@@ -226,7 +258,7 @@ NOTE: Only the first 2000 characters are included:
 
 Tasks:
 1) Give a short high-level summary of the entities represented.
-2) List the columns and what each likely represents.
+2) List the columns and what each likely represents. Use the column headers derived from the data.
 3) Identify columns that look like dates or numbers, and list any invalid values.
 
 Respond EXACTLY as JSON:
@@ -235,6 +267,8 @@ Respond EXACTLY as JSON:
   "columns": [{"name": "...", "meaning": "..."}],
   "validation_issues": {"Column A": ["...", "..."]}
 }
+
+In the validation issues, use the column headers as opposed to coluymn A etc.
 PROMPT;
 
         try {
