@@ -58,21 +58,28 @@ class DataLoad extends Page implements HasForms
                             ->required(),
                     ])
                     ->afterValidation(function (LivewireComponent $livewire, Get $get) {
+                        $livewire->data = [
+                            'status' => 'analysing',
+                            'analysis_summary' => '',
+                            'analysis_columns' => '',
+                            'analysis_issues' => '',
+                        ];
+
                         Notification::make()
                             ->title('Analysing file...')
                             ->info()
                             ->send();
 
                         $livewire->js(<<<'JS'
-                            setTimeout(() => {
-                                const wizard = document.querySelector('[data-id^="wizard-"]');
-                                if (wizard) {
-                                    const nextBtn = wizard.querySelector('button[title="Next step"]');
-                                    if (nextBtn) nextBtn.click();
-                                }
-                                window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
-                            }, 500);
-                        JS
+        setTimeout(() => {
+            const wizard = document.querySelector('[data-id^="wizard-"]');
+            if (wizard) {
+                const nextBtn = wizard.querySelector('button[title="Next step"]');
+                if (nextBtn) nextBtn.click();
+            }
+            window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
+        }, 500);
+    JS
                         );
                     }),
 
@@ -80,22 +87,25 @@ class DataLoad extends Page implements HasForms
                     ->schema([
                         TextEntry::make('data.analysis_summary')
                             ->label('What the data appears to represent')
-                            ->state(fn(
-                            ) => $this->data['status'] === 'complete' ? $this->data['analysis_summary'] : 'Analysing...')
+                            ->state(fn() => $this->data['status'] === 'complete'
+                                ? $this->data['analysis_summary']
+                                : '<span class="animate-pulse text-gray-500">Analysing...</span>')
                             ->html(),
 
                         TextEntry::make('data.analysis_columns')
                             ->label('Columns and their likely meanings')
-                            ->state(fn(
-                            ) => $this->data['status'] === 'complete' ? nl2br(e($this->data['analysis_columns'])) : '')
+                            ->state(fn() => $this->data['status'] === 'complete'
+                                ? nl2br(e($this->data['analysis_columns']))
+                                : '<span class="animate-pulse text-gray-400">Awaiting analysis...</span>')
                             ->html(),
 
                         TextEntry::make('data.analysis_issues')
                             ->label('Validation issues')
-                            ->state(fn(
-                            ) => $this->data['status'] === 'complete' ? nl2br(e($this->data['analysis_issues'])) : '')
+                            ->state(fn() => $this->data['status'] === 'complete'
+                                ? nl2br(e($this->data['analysis_issues']))
+                                : '<span class="animate-pulse text-gray-400">Checking for issues...</span>')
                             ->html(),
-                    ]),
+                    ])
             ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
         ];
     }
@@ -135,6 +145,9 @@ class DataLoad extends Page implements HasForms
 
     protected function extractTextFromFile(string $path): string
     {
+
+        ini_set('memory_limit', '512M');
+
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $fullPath = Storage::disk('local')->path($path);
 
@@ -144,7 +157,9 @@ class DataLoad extends Page implements HasForms
 
         if (in_array($ext, ['xls', 'xlsx'])) {
             try {
-                $spreadsheet = IOFactory::createReaderForFile($fullPath)->load($fullPath);
+                $reader = IOFactory::createReaderForFile($fullPath);
+                $reader->setReadDataOnly(true); // ✅ Lower memory use
+                $spreadsheet = $reader->load($fullPath);
                 $sheet = $spreadsheet->getSheet(0);
                 $rows = $sheet->toArray();
                 $header = array_shift($rows);
@@ -214,6 +229,7 @@ PROMPT;
     {
         \Log::info('Starting processUploadAndAnalyse', ['rawAttachment' => $this->attachment]);
 
+        $this->resetAnalysisFields(); // ✅ Clear fields before analysis begins
         $upload = is_array($this->attachment) ? reset($this->attachment) : $this->attachment;
 
         if (!$upload instanceof TemporaryUploadedFile) {
@@ -235,6 +251,14 @@ PROMPT;
             'storedPath' => $storedPath,
         ]);
 
+        // ✅ Reset data to show fresh analysis starting
+        $this->data = [
+            'status' => 'analysing',
+            'analysis_summary' => '⏳ Analysing...',
+            'analysis_columns' => '',
+            'analysis_issues' => '',
+        ];
+
         $this->dispatch('nextWizardStep');
 
         $this->analyseUploadedFile($storedPath);
@@ -244,5 +268,13 @@ PROMPT;
     {
         $this->storedAttachmentPath = $storedPath;
         $this->runAnalysis();
+    }
+
+    protected function resetAnalysisFields(): void
+    {
+        $this->data['status'] = 'analysing';
+        $this->data['analysis_summary'] = 'Analysing...';
+        $this->data['analysis_columns'] = '';
+        $this->data['analysis_issues'] = '';
     }
 }
