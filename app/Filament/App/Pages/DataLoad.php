@@ -24,10 +24,24 @@ class DataLoad extends Page implements HasForms
     protected static ?string $navigationLabel = 'Data Load';
     protected string $view = 'filament.app.pages.data-load';
 
-    public array $data = [];
-    public array $formData = [];
-    public array $attachment = [];
-    protected ?string $storedAttachmentPath = null;
+    public $data = [];
+    public $formData = [];
+    public $attachment = [];
+    protected $storedAttachmentPath = null;
+
+    public $isAnalysing = false;
+
+    protected $listeners = ['runAnalysis'];
+
+    public function mount(): void
+    {
+        $this->data = [
+            'status' => 'idle',
+            'analysis_summary' => '',
+            'analysis_columns' => '',
+            'analysis_issues' => '',
+        ];
+    }
 
     protected function getFormSchema(): array
     {
@@ -39,51 +53,51 @@ class DataLoad extends Page implements HasForms
                             ->label('Upload Spreadsheet')
                             ->disk('local')
                             ->directory('formattachments')
+                            ->preserveFilenames()
+                            ->multiple(false)
                             ->required(),
                     ])
-                    ->afterValidation(fn(
-                        LivewireComponent $livewire,
-                        Get $get
-                    ) => $livewire->processUploadOnNext($get('attachment'))),
+                    ->afterValidation(function (LivewireComponent $livewire, Get $get) {
+                        Notification::make()
+                            ->title('Analysing file...')
+                            ->info()
+                            ->send();
+
+                        $livewire->js(<<<'JS'
+                            setTimeout(() => {
+                                const wizard = document.querySelector('[data-id^="wizard-"]');
+                                if (wizard) {
+                                    const nextBtn = wizard.querySelector('button[title="Next step"]');
+                                    if (nextBtn) nextBtn.click();
+                                }
+                                window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
+                            }, 500);
+                        JS
+                        );
+                    }),
 
                 Step::make('Review')
                     ->schema([
-                        $this->textEntry('data.analysis_summary', 'What the data appears to represent'),
-                        $this->textEntry('data.analysis_columns', 'Columns and their likely meanings', true),
-                        $this->textEntry('data.analysis_issues', 'Validation issues', true),
+                        TextEntry::make('data.analysis_summary')
+                            ->label('What the data appears to represent')
+                            ->state(fn(
+                            ) => $this->data['status'] === 'complete' ? $this->data['analysis_summary'] : 'Analysing...')
+                            ->html(),
+
+                        TextEntry::make('data.analysis_columns')
+                            ->label('Columns and their likely meanings')
+                            ->state(fn(
+                            ) => $this->data['status'] === 'complete' ? nl2br(e($this->data['analysis_columns'])) : '')
+                            ->html(),
+
+                        TextEntry::make('data.analysis_issues')
+                            ->label('Validation issues')
+                            ->state(fn(
+                            ) => $this->data['status'] === 'complete' ? nl2br(e($this->data['analysis_issues'])) : '')
+                            ->html(),
                     ]),
-            ])->submitAction(
-                Action::make('submit')->label('Submit')->action('submit')
-            ),
+            ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
         ];
-    }
-
-    private function textEntry(string $key, string $label, bool $convert = false): TextEntry
-    {
-        return TextEntry::make($key)
-            ->label($label)
-            ->state(function () use ($key, $convert) {
-                $value = $this->data[$this->stripDataPrefix($key)] ?? '';
-
-                if ($convert && is_string($value)) {
-                    $lines = explode("\n", $value);
-                    return collect($lines)->map(function ($line) {
-                        if (preg_match('/^(.*?):\s*(.*)$/', $line, $m)) {
-                            return "<strong>".e($m[1])."</strong>: ".e($m[2]);
-                        }
-                        return e($line);
-                    })->implode('<br>');
-                }
-
-                return nl2br(e($value));
-            })
-            ->html()
-            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']);
-    }
-
-    private function stripDataPrefix(string $key): string
-    {
-        return str_starts_with($key, 'data.') ? substr($key, 5) : $key;
     }
 
     public function submit(): void
@@ -91,119 +105,38 @@ class DataLoad extends Page implements HasForms
         Notification::make()->title('Form submitted!')->success()->send();
     }
 
-    public function processUploadOnNext(mixed $state): void
+    public function runAnalysis(): void
     {
-        $set = fn(string $key, $value) => str_starts_with($key,
-            'data.') ? $this->data[$this->stripDataPrefix($key)] = $value : null;
+        $set = fn(string $key, $value) => $this->data[str_replace('data.', '', $key)] = $value;
 
-        $state = $this->extractFileToken($state);
-
-        \Log::info('processUploadOnNext: normalized candidate', [
-            'type' => gettype($state),
-            'preview' => is_string($state) ? substr($state, 0, 120) : null,
-        ]);
-
-        $normalized = $this->normalizeUploadState($state);
-        $this->handleAttachmentUpload($normalized, $set);
-    }
-
-    protected function extractFileToken(mixed $state): mixed
-    {
-        if (is_array($state) && count($state) === 1) {
-            $firstKey = array_key_first($state);
-            $firstVal = $state[$firstKey];
-
-            if (is_string($firstKey)) {
-                return $firstKey;
-            }
-            if (is_string($firstVal)) {
-                return $firstVal;
-            }
-            if (is_array($firstVal) && isset($firstVal['id'])) {
-                return $firstVal['id'];
-            }
-            if (is_array($firstVal) && isset($firstVal['path'])) {
-                return $firstVal['path'];
-            }
-        }
-        return $state;
-    }
-
-    protected function normalizeUploadState(mixed $state): mixed
-    {
-        if ($state instanceof TemporaryUploadedFile) {
-            return $state;
-        }
-
-        if (is_string($state)) {
-            try {
-                $tmp = TemporaryUploadedFile::createFromLivewire($state);
-                if (file_exists($tmp->getRealPath())) {
-                    return $tmp;
-                }
-                \Log::warning('normalizeUploadState: token resolved to non-existent temp file',
-                    ['token' => $state, 'path' => $tmp->getRealPath()]);
-            } catch (\Throwable) {
-                return $state;
-            }
-        }
-
-        if (is_array($state)) {
-            return $this->normalizeUploadState($state['id'] ?? $state['path'] ?? $state[0] ?? $state);
-        }
-
-        return $state;
-    }
-
-    private function handleAttachmentUpload(mixed $state, callable $set): void
-    {
-        \Log::info('Entered handleAttachmentUpload', ['type' => gettype($state)]);
-
-        $state = $this->normalizeUploadState($state);
-
-        if (!$state instanceof TemporaryUploadedFile && !is_string($state)) {
-            \Log::warning('State is neither TemporaryUploadedFile nor path string', ['actual' => gettype($state)]);
-            $set('data.analysis_summary', 'Upload error: unexpected file state.');
+        if (!$this->storedAttachmentPath) {
+            $set('data.analysis_summary', 'Error: No uploaded file to process.');
+            $this->data['status'] = 'complete';
             return;
         }
 
-        $finalFilename = $state instanceof TemporaryUploadedFile ? $state->getClientOriginalName() : basename($state);
-        $finalPath = 'formattachments/'.$finalFilename;
-
-        if ($state instanceof TemporaryUploadedFile) {
-            Storage::disk('local')->delete($finalPath);
-            $storedPath = $state->storeAs('formattachments', $finalFilename);
-        } else {
-            $storedPath = $state;
-        }
-
-        $this->storedAttachmentPath = $storedPath;
-
-        \Log::info('start text extraction');
-        $text = $this->extractTextFromFile($storedPath);
-        \Log::info('end text extraction');
-
+        $text = $this->extractTextFromFile($this->storedAttachmentPath);
         $analysis = $this->callOpenAiAnalysis($text);
 
         if (isset($analysis['error'])) {
             $set('data.analysis_summary', 'OpenAI Error: '.$analysis['error']);
+            $this->data['status'] = 'complete';
             return;
         }
-
-        \Log::info('OpenAI analysis successful');
 
         $set('data.analysis_summary', $analysis['summary'] ?? 'No summary.');
         $set('data.analysis_columns',
             collect($analysis['columns'] ?? [])->map(fn($c) => "$c[name]: $c[meaning]")->implode("\n"));
         $set('data.analysis_issues',
             collect($analysis['validation_issues'] ?? [])->map(fn($v, $k) => "$k: ".implode(', ', $v))->implode("\n"));
+
+        $this->data['status'] = 'complete';
     }
 
     protected function extractTextFromFile(string $path): string
     {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $fullPath = Storage::disk('local')->path($path);
-        \Log::info('Extracting text from file', ['path' => $path, 'fullPath' => $fullPath, 'extension' => $ext]);
 
         if ($ext === 'csv') {
             return file_get_contents($fullPath);
@@ -212,16 +145,12 @@ class DataLoad extends Page implements HasForms
         if (in_array($ext, ['xls', 'xlsx'])) {
             try {
                 $spreadsheet = IOFactory::createReaderForFile($fullPath)->load($fullPath);
-                foreach ($spreadsheet->getAllSheets() as $sheet) {
-                    $rows = $sheet->toArray();
-                    if (count($rows) < 2 || count(array_filter($rows[0])) < 2) {
-                        continue;
-                    }
-                    $header = array_shift($rows);
-                    return collect(array_merge([$header], array_slice($rows, 0, 50)))
-                        ->map(fn($r) => implode("\t", array_map('strval', $r)))
-                        ->implode("\n");
-                }
+                $sheet = $spreadsheet->getSheet(0);
+                $rows = $sheet->toArray();
+                $header = array_shift($rows);
+                return collect([$header, ...array_slice($rows, 0, 50)])
+                    ->map(fn($r) => implode("\t", array_map('strval', $r)))
+                    ->implode("\n");
             } catch (\Throwable $e) {
                 return 'Error reading spreadsheet: '.$e->getMessage();
             }
@@ -232,11 +161,6 @@ class DataLoad extends Page implements HasForms
 
     protected function callOpenAiAnalysis(string $plainText): array
     {
-        \Log::info('PlainText content + length', [
-            'length_bytes' => strlen($plainText),
-            'excerpt' => substr($plainText, 0, 1000),
-        ]);
-
         $apiKey = config('services.openai.key');
         if (!$apiKey) {
             return ['error' => 'Missing API key.'];
@@ -280,16 +204,45 @@ PROMPT;
             $text = $json['choices'][0]['message']['content'] ?? '';
             $decoded = json_decode(preg_replace('/^```(?:json)?|```$/m', '', $text), true);
 
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-            if (preg_match('/\{.*?\}/s', $text, $m)) {
-                return json_decode($m[0], true) ?? ['error' => 'Unable to parse response'];
-            }
-
-            return ['error' => 'Unable to parse response'];
+            return is_array($decoded) ? $decoded : ['error' => 'Unable to parse response'];
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
+    }
+
+    public function processUploadAndAnalyse(): void
+    {
+        \Log::info('Starting processUploadAndAnalyse', ['rawAttachment' => $this->attachment]);
+
+        $upload = is_array($this->attachment) ? reset($this->attachment) : $this->attachment;
+
+        if (!$upload instanceof TemporaryUploadedFile) {
+            \Log::warning('Attachment is not a TemporaryUploadedFile', ['type' => gettype($upload)]);
+            return;
+        }
+
+        $storedPath = $upload->store('formattachments');
+
+        if (!$storedPath) {
+            \Log::error('Failed to store uploaded file');
+            return;
+        }
+
+        $this->storedAttachmentPath = $storedPath;
+
+        \Log::info('File stored to formattachments', [
+            'originalName' => $upload->getClientOriginalName(),
+            'storedPath' => $storedPath,
+        ]);
+
+        $this->dispatch('nextWizardStep');
+
+        $this->analyseUploadedFile($storedPath);
+    }
+
+    public function analyseUploadedFile(string $storedPath): void
+    {
+        $this->storedAttachmentPath = $storedPath;
+        $this->runAnalysis();
     }
 }
