@@ -4,8 +4,6 @@ namespace App\Filament\App\Pages;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Textarea;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
@@ -17,6 +15,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component as LivewireComponent;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class DataLoad extends Page implements HasForms
 {
@@ -40,54 +39,51 @@ class DataLoad extends Page implements HasForms
                             ->label('Upload Spreadsheet')
                             ->disk('local')
                             ->directory('formattachments')
-                            ->multiple(false)
                             ->required(),
                     ])
-                    ->afterValidation(function (LivewireComponent $livewire, Get $get) {
-                        $state = $get('attachment');
-                        $livewire->processUploadOnNext($state);
-                    }),
-
+                    ->afterValidation(fn(
+                        LivewireComponent $livewire,
+                        Get $get
+                    ) => $livewire->processUploadOnNext($get('attachment'))),
 
                 Step::make('Review')
                     ->schema([
-                        TextEntry::make('data.analysis_summary')
-                            ->label('What the data appears to represent')
-                            ->state(fn() => $this->data['analysis_summary'] ?? '')
-                            ->html()
-                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
-
-                        TextEntry::make('data.analysis_columns')
-                            ->label('Columns and their likely meanings')
-                            ->state(function (): string {
-                                $raw = $this->data['analysis_columns'] ?? '';
-                                $lines = explode("\n", $raw);
-
-                                return collect($lines)->map(function ($line) {
-                                    if (preg_match('/^(.*?):\s*(.*)$/', $line, $m)) {
-                                        $col = trim($m[1]);
-                                        $desc = trim($m[2]);
-                                        return "<strong>{$col}</strong>: {$desc}";
-                                    }
-                                    return e($line);
-                                })->implode('<br>');
-                            })
-                            ->html()
-                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
-
-                        TextEntry::make('data.analysis_issues')
-                            ->label('Validation issues')
-                            ->state(function (): string {
-                                $raw = $this->data['analysis_issues'] ?? '';
-                                return nl2br(e($raw));
-                            })
-                            ->html()
-                            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']),
+                        $this->textEntry('data.analysis_summary', 'What the data appears to represent'),
+                        $this->textEntry('data.analysis_columns', 'Columns and their likely meanings', true),
+                        $this->textEntry('data.analysis_issues', 'Validation issues', true),
                     ]),
             ])->submitAction(
                 Action::make('submit')->label('Submit')->action('submit')
             ),
         ];
+    }
+
+    private function textEntry(string $key, string $label, bool $convert = false): TextEntry
+    {
+        return TextEntry::make($key)
+            ->label($label)
+            ->state(function () use ($key, $convert) {
+                $value = $this->data[$this->stripDataPrefix($key)] ?? '';
+
+                if ($convert && is_string($value)) {
+                    $lines = explode("\n", $value);
+                    return collect($lines)->map(function ($line) {
+                        if (preg_match('/^(.*?):\s*(.*)$/', $line, $m)) {
+                            return "<strong>".e($m[1])."</strong>: ".e($m[2]);
+                        }
+                        return e($line);
+                    })->implode('<br>');
+                }
+
+                return nl2br(e($value));
+            })
+            ->html()
+            ->extraAttributes(['class' => 'whitespace-pre-wrap prose']);
+    }
+
+    private function stripDataPrefix(string $key): string
+    {
+        return str_starts_with($key, 'data.') ? substr($key, 5) : $key;
     }
 
     public function submit(): void
@@ -97,22 +93,10 @@ class DataLoad extends Page implements HasForms
 
     public function processUploadOnNext(mixed $state): void
     {
-        $set = fn(string $key, $value) => str_starts_with($key, 'data.') ? $this->data[substr($key, 5)] = $value : null;
+        $set = fn(string $key, $value) => str_starts_with($key,
+            'data.') ? $this->data[$this->stripDataPrefix($key)] = $value : null;
 
-        if (is_array($state) && count($state) === 1) {
-            $firstKey = array_key_first($state);
-            $firstVal = $state[$firstKey];
-
-            if (is_string($firstKey)) {
-                $state = $firstKey;
-            } elseif (is_string($firstVal)) {
-                $state = $firstVal;
-            } elseif (is_array($firstVal) && isset($firstVal['id'])) {
-                $state = $firstVal['id'];
-            } elseif (is_array($firstVal) && isset($firstVal['path'])) {
-                $state = $firstVal['path'];
-            }
-        }
+        $state = $this->extractFileToken($state);
 
         \Log::info('processUploadOnNext: normalized candidate', [
             'type' => gettype($state),
@@ -121,6 +105,28 @@ class DataLoad extends Page implements HasForms
 
         $normalized = $this->normalizeUploadState($state);
         $this->handleAttachmentUpload($normalized, $set);
+    }
+
+    protected function extractFileToken(mixed $state): mixed
+    {
+        if (is_array($state) && count($state) === 1) {
+            $firstKey = array_key_first($state);
+            $firstVal = $state[$firstKey];
+
+            if (is_string($firstKey)) {
+                return $firstKey;
+            }
+            if (is_string($firstVal)) {
+                return $firstVal;
+            }
+            if (is_array($firstVal) && isset($firstVal['id'])) {
+                return $firstVal['id'];
+            }
+            if (is_array($firstVal) && isset($firstVal['path'])) {
+                return $firstVal['path'];
+            }
+        }
+        return $state;
     }
 
     protected function normalizeUploadState(mixed $state): mixed
@@ -143,15 +149,7 @@ class DataLoad extends Page implements HasForms
         }
 
         if (is_array($state)) {
-            if (isset($state['id'])) {
-                return $this->normalizeUploadState($state['id']);
-            }
-            if (isset($state['path'])) {
-                return $state['path'];
-            }
-            if (isset($state[0])) {
-                return $this->normalizeUploadState($state[0]);
-            }
+            return $this->normalizeUploadState($state['id'] ?? $state['path'] ?? $state[0] ?? $state);
         }
 
         return $state;
@@ -213,17 +211,16 @@ class DataLoad extends Page implements HasForms
 
         if (in_array($ext, ['xls', 'xlsx'])) {
             try {
-                $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReaderForFile($fullPath);
-                $spreadsheet = $reader->load($fullPath);
+                $spreadsheet = IOFactory::createReaderForFile($fullPath)->load($fullPath);
                 foreach ($spreadsheet->getAllSheets() as $sheet) {
                     $rows = $sheet->toArray();
                     if (count($rows) < 2 || count(array_filter($rows[0])) < 2) {
                         continue;
                     }
                     $header = array_shift($rows);
-                    $text = collect(array_merge([$header], array_slice($rows, 0, 50)))->map(fn($r) => implode("\t",
-                        array_map('strval', $r)))->implode("\n");
-                    return $text;
+                    return collect(array_merge([$header], array_slice($rows, 0, 50)))
+                        ->map(fn($r) => implode("\t", array_map('strval', $r)))
+                        ->implode("\n");
                 }
             } catch (\Throwable $e) {
                 return 'Error reading spreadsheet: '.$e->getMessage();
@@ -245,7 +242,6 @@ class DataLoad extends Page implements HasForms
             return ['error' => 'Missing API key.'];
         }
 
-        $truncated = substr($plainText, 0, 2000);
         $prompt = <<<PROMPT
 You are an expert in interpreting data tables.
 
@@ -253,12 +249,12 @@ The following is the raw content of a spreadsheet (tab-separated).
 NOTE: Only the first 2000 characters are included:
 
 ---
-{$truncated}
+{$plainText}
 ---
 
 Tasks:
 1) Give a short high-level summary of the entities represented.
-2) List the columns and what each likely represents. Use the column headers derived from the data.
+2) List the columns and what each likely represents.
 3) Identify columns that look like dates or numbers, and list any invalid values.
 
 Respond EXACTLY as JSON:
@@ -267,8 +263,6 @@ Respond EXACTLY as JSON:
   "columns": [{"name": "...", "meaning": "..."}],
   "validation_issues": {"Column A": ["...", "..."]}
 }
-
-In the validation issues, use the column headers as opposed to coluymn A etc.
 PROMPT;
 
         try {
@@ -283,31 +277,17 @@ PROMPT;
             ]);
 
             $json = $response->json();
-            if (isset($json['error'])) {
-                return ['error' => $json['error']['message'] ?? 'Unknown error'];
-            }
-
             $text = $json['choices'][0]['message']['content'] ?? '';
-            $decoded = json_decode($text, true);
+            $decoded = json_decode(preg_replace('/^```(?:json)?|```$/m', '', $text), true);
+
             if (is_array($decoded)) {
                 return $decoded;
             }
-
-            $fallback = preg_replace('/^```(?:json)?|```$/m', '', $text);
-            $decoded = json_decode($fallback, true);
-            if (is_array($decoded)) {
-                return $decoded;
-            }
-
             if (preg_match('/\{.*?\}/s', $text, $m)) {
-                $decoded = json_decode($m[0], true);
-                if (is_array($decoded)) {
-                    return $decoded;
-                }
+                return json_decode($m[0], true) ?? ['error' => 'Unable to parse response'];
             }
 
             return ['error' => 'Unable to parse response'];
-
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
