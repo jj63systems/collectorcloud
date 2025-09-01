@@ -4,6 +4,8 @@ namespace App\Filament\App\Pages;
 
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
@@ -13,9 +15,11 @@ use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Component as LivewireComponent;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Filament\Schemas\Components\Section;
 
 class DataLoad extends Page implements HasForms
 {
@@ -27,9 +31,8 @@ class DataLoad extends Page implements HasForms
     public $data = [];
     public $formData = [];
     public $attachment = [];
+    public $sheetNames = [];
     protected $storedAttachmentPath = null;
-
-    public $isAnalysing = false;
 
     protected $listeners = ['runAnalysis'];
 
@@ -55,7 +58,29 @@ class DataLoad extends Page implements HasForms
                             ->directory('formattachments')
                             ->preserveFilenames()
                             ->multiple(false)
-                            ->required(),
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(fn($state) => $this->processUploadedFileInfo($state)),
+
+                        ViewField::make('sheet_message')
+                            ->view('filament.app.components.sheet-message')
+                            ->visible(fn() => count($this->sheetNames) === 1),
+
+
+                        Section::make('Worksheet Selection')
+                            ->schema([
+                                Radio::make('formData.sheetName')
+                                    ->label('Select worksheet')
+                                    ->options(fn() => collect($this->sheetNames)->mapWithKeys(fn($name
+                                    ) => [$name => $name])->toArray())
+                                    ->required(),
+                            ])
+                            ->visible(fn() => count($this->sheetNames) > 1)
+                            ->extraAttributes([
+                                'class' => 'bg-gray-50 rounded-md p-4 border border-gray-200',
+                            ])
+
+
                     ])
                     ->afterValidation(function (LivewireComponent $livewire, Get $get) {
                         $livewire->data = [
@@ -82,9 +107,16 @@ class DataLoad extends Page implements HasForms
     JS
                         );
                     }),
-
                 Step::make('Review')
                     ->schema([
+                        TextEntry::make('selectedSheet')
+                            ->label('Worksheet being processed')
+                            ->state(fn() => $this->formData['sheetName'] ?? '[Unknown]')
+                            ->visible(fn() => filled(data_get($this->formData, 'sheetName')))
+                            ->extraAttributes([
+                                'class' => 'bg-gray-100 rounded-md p-2 mb-4 text-sm text-gray-700',
+                            ]),
+
                         TextEntry::make('data.analysis_summary')
                             ->label('What the data appears to represent')
                             ->state(fn() => $this->data['analysis_summary'])
@@ -147,27 +179,29 @@ class DataLoad extends Page implements HasForms
 
     protected function extractTextFromFile(string $path): string
     {
-
-        ini_set('memory_limit', '512M');
-
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $fullPath = Storage::disk('local')->path($path);
 
         if ($ext === 'csv') {
-            return file_get_contents($fullPath);
+            return Str::limit(file_get_contents($fullPath), 4000, '...'); // ✅ cap CSV too
         }
 
         if (in_array($ext, ['xls', 'xlsx'])) {
             try {
                 $reader = IOFactory::createReaderForFile($fullPath);
-                $reader->setReadDataOnly(true); // ✅ Lower memory use
+                $reader->setReadDataOnly(true);
                 $spreadsheet = $reader->load($fullPath);
-                $sheet = $spreadsheet->getSheet(0);
+
+                $sheetName = $this->formData['sheetName'] ?? $spreadsheet->getSheetNames()[0];
+                $sheet = $spreadsheet->getSheetByName($sheetName);
                 $rows = $sheet->toArray();
                 $header = array_shift($rows);
-                return collect([$header, ...array_slice($rows, 0, 50)])
+
+                $text = collect([$header, ...array_slice($rows, 0, 50)])
                     ->map(fn($r) => implode("\t", array_map('strval', $r)))
                     ->implode("\n");
+
+                return Str::limit($text, 4000, '...'); // ✅ cap text length
             } catch (\Throwable $e) {
                 return 'Error reading spreadsheet: '.$e->getMessage();
             }
@@ -187,8 +221,10 @@ class DataLoad extends Page implements HasForms
 You are an expert in interpreting data tables.
 
 The following is the raw content of a spreadsheet (tab-separated).
-NOTE: Only the first 2000 characters are included:
-
+NOTE: Only the first 4000 characters are included:
+NOTE2: Bear in mind that this is data related to collections / archives so the context is likely to be linked to that -
+it is likely to include data about one or more entities such as donors, donations, items, and locations - use this information to help identify the most likely purpose of each column.
+If a column appears to be a location (i.e. a place where an item may be found) then please look at the data content to see if there is a logical structure and suggest what it might mean.
 ---
 {$plainText}
 ---
@@ -229,6 +265,8 @@ PROMPT;
 
     public function processUploadAndAnalyse(): void
     {
+
+
         \Log::info('Starting processUploadAndAnalyse', ['rawAttachment' => $this->attachment]);
 
         $this->resetAnalysisFields();
@@ -272,5 +310,35 @@ PROMPT;
             'analysis_columns' => '',
             'analysis_issues' => '',
         ];
+    }
+
+    public function processUploadedFileInfo($upload): void
+    {
+
+//        ini_set('memory_limit', '512M');
+
+        $this->sheetNames = [];
+
+        if (!$upload instanceof TemporaryUploadedFile) {
+            return;
+        }
+
+        $ext = pathinfo($upload->getClientOriginalName(), PATHINFO_EXTENSION);
+        $fullPath = $upload->getRealPath();
+
+        if (in_array(strtolower($ext), ['xls', 'xlsx'])) {
+            try {
+                $reader = IOFactory::createReaderForFile($fullPath);
+                $spreadsheet = $reader->load($fullPath);
+                $this->sheetNames = $spreadsheet->getSheetNames();
+
+                if (count($this->sheetNames) === 1) {
+                    $this->formData['sheetName'] = $this->sheetNames[0];
+                }
+            } catch (\Throwable $e) {
+                $this->sheetNames = [];
+                \Log::error('Error reading spreadsheet for sheet names: '.$e->getMessage());
+            }
+        }
     }
 }
