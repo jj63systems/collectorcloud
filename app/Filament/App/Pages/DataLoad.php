@@ -36,6 +36,11 @@ class DataLoad extends Page implements HasForms
 
     protected $listeners = ['runAnalysis'];
 
+    public string $summaryText = '';
+    public array $columns = [];
+    public array $validationIssues = [];
+    public array $entities = [];
+
     public function mount(): void
     {
         $this->data = [
@@ -96,15 +101,15 @@ class DataLoad extends Page implements HasForms
                             ->send();
 
                         $livewire->js(<<<'JS'
-        setTimeout(() => {
-            const wizard = document.querySelector('[data-id^="wizard-"]');
-            if (wizard) {
-                const nextBtn = wizard.querySelector('button[title="Next step"]');
-                if (nextBtn) nextBtn.click();
-            }
-            window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
-        }, 500);
-    JS
+                                        setTimeout(() => {
+                                            const wizard = document.querySelector('[data-id^="wizard-"]');
+                                            if (wizard) {
+                                                const nextBtn = wizard.querySelector('button[title="Next step"]');
+                                                if (nextBtn) nextBtn.click();
+                                            }
+                                            window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
+                                        }, 500);
+                                    JS
                         );
                     }),
                 Step::make('Review')
@@ -117,28 +122,45 @@ class DataLoad extends Page implements HasForms
                                 'class' => 'bg-gray-100 rounded-md p-2 mb-4 text-sm text-gray-700',
                             ]),
 
-                        TextEntry::make('data.analysis_summary')
-                            ->label('What the data appears to represent')
-                            ->state(fn() => $this->data['analysis_summary'])
-                            ->hidden(fn() => $this->data['status'] !== 'complete')
-                            ->html(),
+                        ViewField::make('data.analysis_combined')
+                            ->view('filament.app.components.analysis-blocks', [
+                                'summaryText' => $this->summaryText,
+                                'columns' => $this->columns,
+                                'validationIssues' => $this->validationIssues,
+                                'entities' => $this->entities,
+                            ])
+                            ->visible(fn() => $this->data['status'] === 'complete'),
 
-                        TextEntry::make('data.analysis_columns')
-                            ->label('Columns and their likely meanings')
-                            ->state(fn() => nl2br(e($this->data['analysis_columns'])))
-                            ->hidden(fn() => $this->data['status'] !== 'complete')
-                            ->html(),
-
-                        TextEntry::make('data.analysis_issues')
-                            ->label('Validation issues')
-                            ->state(fn() => nl2br(e($this->data['analysis_issues'])))
-                            ->hidden(fn() => $this->data['status'] !== 'complete')
-                            ->html(),
+//                        TextEntry::make('data.analysis_summary')
+//                            ->label('What the data appears to represent')
+//                            ->state(fn() => $this->data['analysis_summary'])
+//                            ->hidden(fn() => $this->data['status'] !== 'complete')
+//                            ->html(),
+//
+//
+//                        TextEntry::make('data.analysis_columns')
+//                            ->label('Columns and their likely meanings')
+//                            ->state(fn() => $this->data['analysis_columns'] ?? [])
+//                            ->html()
+//                            ->hidden(fn() => $this->data['status'] !== 'complete'),
+//
+//                        TextEntry::make('data.analysis_issues')
+//                            ->label('Validation issues')
+//                            ->state(fn() => $this->data['analysis_issues'])
+//                            ->hidden(fn() => $this->data['status'] !== 'complete')
+//                            ->html(),
+//
+//                        TextEntry::make('data.entities')
+//                            ->label('Entities')
+//                            ->state(fn() => $this->data['entities'])
+//                            ->hidden(fn() => $this->data['status'] !== 'complete')
+//                            ->html(),
 
                         TextEntry::make('data.analysis_loader')
                             ->state('⏳ Analysing file, please wait...')
                             ->visible(fn() => $this->data['status'] !== 'complete')
-                            ->extraAttributes(['class' => 'animate-pulse text-gray-500']),
+                            ->extraAttributes(['class' => 'animate-pulse text-gray-500'])
+                            ->html(),
                     ])
             ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
         ];
@@ -163,18 +185,46 @@ class DataLoad extends Page implements HasForms
         $analysis = $this->callOpenAiAnalysis($text);
 
         if (isset($analysis['error'])) {
+            \Log::info('OpenAI analysis error', ['error' => $analysis['error']]);
             $set('data.analysis_summary', 'OpenAI Error: '.$analysis['error']);
             $this->data['status'] = 'complete';
             return;
         }
 
-        $set('data.analysis_summary', $analysis['summary'] ?? 'No summary.');
-        $set('data.analysis_columns',
-            collect($analysis['columns'] ?? [])->map(fn($c) => "$c[name]: $c[meaning]")->implode("\n"));
-        $set('data.analysis_issues',
-            collect($analysis['validation_issues'] ?? [])->map(fn($v, $k) => "$k: ".implode(', ', $v))->implode("\n"));
+        // ✅ Assign structured outputs
+        $this->summaryText = $analysis['summary'] ?? '';
+
+        $this->columns = collect($analysis['columns'] ?? [])
+            ->mapWithKeys(function ($col) {
+                $original = $col['name'] ?? '[Unnamed]';
+                $key = $this->toPostgresColumnName($original);
+                return [
+                    $key => [
+                        'original' => $original,
+                        'meaning' => $col['meaning'] ?? '[No description]',
+                    ],
+                ];
+            })
+            ->toArray();
+
+        $this->validationIssues = collect($analysis['validation_issues'] ?? [])
+            ->mapWithKeys(function ($issues, $original) {
+                $key = $this->toPostgresColumnName($original);
+                return [$key => $issues];
+            })
+            ->toArray();
+
+        $this->entities = collect($analysis['entities'] ?? [])
+            ->mapWithKeys(function ($entity) {
+                $key = strtoupper($entity['name'] ?? 'UNKNOWN');
+                $examples = $entity['examples'] ?? [];
+                return [$key => $entity['detected'] ? ($examples[0] ?? '—') : null];
+            })
+            ->toArray();
 
         $this->data['status'] = 'complete';
+
+        \Log::info('Analysis complete', ['data' => $this->data]);
     }
 
     protected function extractTextFromFile(string $path): string
@@ -218,13 +268,12 @@ class DataLoad extends Page implements HasForms
         }
 
         $prompt = <<<PROMPT
-You are an expert in interpreting data tables.
+You are an expert in interpreting data tables held in Excel or CSV format.
 
 The following is the raw content of a spreadsheet (tab-separated).
-NOTE: Only the first 4000 characters are included:
-NOTE2: Bear in mind that this is data related to collections / archives so the context is likely to be linked to that -
-it is likely to include data about one or more entities such as donors, donations, items, and locations - use this information to help identify the most likely purpose of each column.
-If a column appears to be a location (i.e. a place where an item may be found) then please look at the data content to see if there is a logical structure and suggest what it might mean.
+NOTE: Only a subset of the data is included here.
+NOTE 2: This data is related to collections or archives — so the context is likely to involve entities such as donors, donations, items, and locations. Use this information to help identify the most likely purpose of each column.
+If a column appears to be a location (i.e., a place where an item may be found), look at the data content to see if there is a logical structure and suggest what it might represent.
 ---
 {$plainText}
 ---
@@ -232,13 +281,30 @@ If a column appears to be a location (i.e. a place where an item may be found) t
 Tasks:
 1) Give a short high-level summary of the entities represented.
 2) List the columns and what each likely represents.
-3) Identify columns that look like dates or numbers, and list any invalid values.
+3) Identify any columns that look like dates or numbers, and list any invalid values. Only include columns with invalid values in the "validation_issues" section. Use exact string values as seen in the data.
+4) From the following list of possible entities, assess whether each is effectively referenced in the data:
+   LOCATIONS, DONORS, DONATIONS, ITEMS.
+   For each, return:
+   - The entity name
+   - Whether it is detected in the data (true/false)
+   - One or two example values (if applicable)
 
 Respond EXACTLY as JSON:
 {
   "summary": "...",
-  "columns": [{"name": "...", "meaning": "..."}],
-  "validation_issues": {"Column A": ["...", "..."]}
+  "columns": [
+    { "name": "...", "meaning": "..." }
+  ],
+  "validation_issues": {
+    "Column A": ["invalid date", "not a number"],
+    "Column B": ["..."]
+  },
+  "entities": [
+    { "name": "LOCATIONS", "detected": true, "examples": ["Room 1", "Hangar A"] },
+    { "name": "DONORS", "detected": false, "examples": [] },
+    { "name": "DONATIONS", "detected": true, "examples": ["Loan", "Gift"] },
+    { "name": "ITEMS", "detected": true, "examples": ["Radio", "Engine part"] }
+  ]
 }
 PROMPT;
 
@@ -253,11 +319,23 @@ PROMPT;
                 'response_format' => ['type' => 'json_object'],
             ]);
 
-            $json = $response->json();
-            $text = $json['choices'][0]['message']['content'] ?? '';
-            $decoded = json_decode(preg_replace('/^```(?:json)?|```$/m', '', $text), true);
+            \Log::info('Raw OpenAI response body: '.$response->body());
 
-            return is_array($decoded) ? $decoded : ['error' => 'Unable to parse response'];
+            $json = $response->json();
+            $content = $json['choices'][0]['message']['content'] ?? '';
+
+            // Clean markdown-style code fences (e.g., ```json ... ```)
+            $content = trim($content);
+            $content = preg_replace('/^```(?:json)?|```$/m', '', $content);
+
+            $decoded = json_decode($content, true);
+
+            if (!is_array($decoded)) {
+                \Log::error('Unable to decode OpenAI content as JSON', ['content' => $content]);
+                return ['error' => 'Invalid JSON response from OpenAI.'];
+            }
+
+            return $decoded;
         } catch (\Throwable $e) {
             return ['error' => $e->getMessage()];
         }
@@ -340,5 +418,33 @@ PROMPT;
                 \Log::error('Error reading spreadsheet for sheet names: '.$e->getMessage());
             }
         }
+    }
+
+    protected function toPostgresColumnName(string $input): string
+    {
+        // 1. Lowercase
+        $name = mb_strtolower($input);
+
+        // 2. Replace invalid characters with underscore
+        $name = preg_replace('/[^a-z0-9_]/', '_', $name);
+
+        // 3. Collapse multiple underscores
+        $name = preg_replace('/_+/', '_', $name);
+
+        // 4. Trim leading/trailing underscores
+        $name = trim($name, '_');
+
+        // 5. Ensure it doesn't start with a number
+        if (preg_match('/^[0-9]/', $name)) {
+            $name = 'col_'.$name;
+        }
+
+        // 6. Fallback if empty
+        if ($name === '') {
+            $name = 'col_unnamed';
+        }
+
+        // 7. Truncate to 63 characters (PostgreSQL max identifier length)
+        return substr($name, 0, 63);
     }
 }
