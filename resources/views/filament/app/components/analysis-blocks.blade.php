@@ -3,4 +3,5 @@
     :columns="$columns"
     :validation-issues="$validationIssues"
     :entities="$entities"
+    :rows-analysed="$rowsAnalysed"
 />

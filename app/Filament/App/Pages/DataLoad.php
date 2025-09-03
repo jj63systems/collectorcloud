@@ -25,6 +25,8 @@ class DataLoad extends Page implements HasForms
 {
     use InteractsWithForms;
 
+
+    // --- variables ------------------------------
     protected static ?string $navigationLabel = 'Data Load';
     protected string $view = 'filament.app.pages.data-load';
 
@@ -42,6 +44,13 @@ class DataLoad extends Page implements HasForms
     public array $entities = [];
 
     public array $selectedEntities = [];
+
+    public int $rowsAnalysed = 0; // Number of rows analysed (excluding header)
+
+    protected array $headerMap = []; // normalized_name => original_header
+
+
+    // --- end of variables ------------------------------
 
 
     public function mount(): void
@@ -131,6 +140,8 @@ class DataLoad extends Page implements HasForms
                                 'columns' => $this->columns,
                                 'validationIssues' => $this->validationIssues,
                                 'entities' => $this->entities,
+                                'rowsAnalysed' => $this->rowsAnalysed,
+
                             ])
                             ->visible(fn() => $this->data['status'] === 'complete'),
 
@@ -160,8 +171,11 @@ class DataLoad extends Page implements HasForms
             return;
         }
 
-        $text = $this->extractTextFromFile($this->storedAttachmentPath);
-        $analysis = $this->callOpenAiAnalysis($text);
+        $result = $this->extractTextFromFile($this->storedAttachmentPath);
+        $plainText = $result['text'] ?? '';
+        $this->rowsAnalysed = $result['rowsAnalysed'] ?? 0;
+
+        $analysis = $this->callOpenAiAnalysis($plainText);
 
         if (isset($analysis['error'])) {
             \Log::info('OpenAI analysis error', ['error' => $analysis['error']]);
@@ -187,11 +201,19 @@ class DataLoad extends Page implements HasForms
             ->toArray();
 
         $this->validationIssues = collect($analysis['validation_issues'] ?? [])
-            ->mapWithKeys(function ($issues, $original) {
-                $key = $this->toPostgresColumnName($original);
-                return [$key => $issues];
+            ->mapWithKeys(function ($issues, $maybeNormalized) {
+                $normalized = $this->normalizeHeader($maybeNormalized);
+
+                $originalHeader = $this->headerMap[$normalized] ?? $maybeNormalized;
+
+                return [$originalHeader => $issues];
             })
             ->toArray();
+
+        \Log::info('Validation issue keys received', [
+            'raw_keys' => array_keys($analysis['validation_issues'] ?? []),
+            'mapped_keys' => array_keys($this->validationIssues),
+        ]);
 
         $this->entities = collect($analysis['entities'] ?? [])
             ->mapWithKeys(function ($entity) {
@@ -201,21 +223,28 @@ class DataLoad extends Page implements HasForms
             })
             ->toArray();
 
-        // Auto-select detected entities by default
         $this->selectedEntities = array_keys(array_filter($this->entities, fn($v) => !is_null($v)));
 
         $this->data['status'] = 'complete';
 
-        \Log::info('Analysis complete');
+        \Log::info('Analysis complete', ['rowsAnalysed' => $this->rowsAnalysed]);
     }
 
-    protected function extractTextFromFile(string $path): string
+    protected function extractTextFromFile(string $path): array
     {
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $fullPath = Storage::disk('local')->path($path);
 
         if ($ext === 'csv') {
-            return Str::limit(file_get_contents($fullPath), 4000, '...'); // ✅ cap CSV too
+            $lines = file($fullPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $header = array_shift($lines);
+            $rows = array_slice($lines, 0, 50); // Limit to 50 rows max
+            $text = implode("\n", [$header, ...$rows]);
+
+            return [
+                'text' => Str::limit($text, 4000, '...'),
+                'rowsAnalysed' => count($rows),
+            ];
         }
 
         if (in_array($ext, ['xls', 'xlsx'])) {
@@ -227,19 +256,33 @@ class DataLoad extends Page implements HasForms
                 $sheetName = $this->formData['sheetName'] ?? $spreadsheet->getSheetNames()[0];
                 $sheet = $spreadsheet->getSheetByName($sheetName);
                 $rows = $sheet->toArray();
-                $header = array_shift($rows);
 
-                $text = collect([$header, ...array_slice($rows, 0, 50)])
+                $header = array_shift($rows);
+                $sample = array_slice($rows, 0, 50); // Limit to 50 rows max
+                $this->headerMap = collect($header)
+                    ->mapWithKeys(fn($h) => [$this->normalizeHeader((string) $h) => (string) $h])
+                    ->toArray();
+
+                $text = collect([$header, ...$sample])
                     ->map(fn($r) => implode("\t", array_map('strval', $r)))
                     ->implode("\n");
 
-                return Str::limit($text, 4000, '...'); // ✅ cap text length
+                return [
+                    'text' => Str::limit($text, 4000, '...'),
+                    'rowsAnalysed' => count($sample),
+                ];
             } catch (\Throwable $e) {
-                return 'Error reading spreadsheet: '.$e->getMessage();
+                return [
+                    'text' => 'Error reading spreadsheet: '.$e->getMessage(),
+                    'rowsAnalysed' => 0,
+                ];
             }
         }
 
-        return 'Unsupported file type.';
+        return [
+            'text' => 'Unsupported file type.',
+            'rowsAnalysed' => 0,
+        ];
     }
 
     protected function callOpenAiAnalysis(string $plainText): array
@@ -250,20 +293,22 @@ class DataLoad extends Page implements HasForms
         }
 
         $prompt = <<<PROMPT
-You are an expert in interpreting data tables held in Excel or CSV format.
-
-The following is the raw content of a spreadsheet (tab-separated).
+You work in the archive team of a museum or similar organisation. You are given a spreadsheet of data - it is provided as raw content (tab-separated).
 NOTE: Only a subset of the data is included here.
 NOTE 2: This data is related to collections or archives — so the context is likely to involve entities such as donors, donations, items, and locations. Use this information to help identify the most likely purpose of each column.
-If a column appears to be a location (i.e., a place where an item may be found), look at the data content to see if there is a logical structure and suggest what it might represent.
+If a column appears to be a location (i.e., a place where an item may be found), look at the data content to see if there is a logical structure and suggest what it might represent. Apply this to the other columns found.
 ---
 {$plainText}
 ---
 
 Tasks:
-1) Give a short high-level summary of the entities represented.
+1) Give a short high-level summary of the content in general terms - be clear that the analysis is based on only a small number of records sampled.
 2) List the columns and what each likely represents.
-3) Identify any columns that look like dates or numbers, and list any invalid values. Only include columns with invalid values in the "validation_issues" section. Use exact string values as seen in the data.
+3) Identify any columns that appear to contain dates or numbers, and list only the values that are invalid or ambiguous.
+   - A valid date can be in any commonly used format (e.g. dd/mm/yyyy, yyyy-mm-dd, 1-Jul-2019, Excel-style serial numbers like 43633, etc.).
+   - If the format is valid but ambiguous (e.g. 03/04/21), assume UK date order (dd/mm/yyyy) unless obviously inconsistent with surrounding data.
+   - Do not report valid values as invalid just because the format varies.
+   - When listing validation issues, ensure that the data value that appears incorrect is listed under its corresponding column name.
 4) From the following list of possible entities, assess whether each is effectively referenced in the data:
    LOCATIONS, DONORS, DONATIONS, ITEMS.
    For each, return:
@@ -291,7 +336,7 @@ Respond EXACTLY as JSON:
 PROMPT;
 
         try {
-            $response = \Http::withToken($apiKey)->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
+            $response = \Http::withToken($apiKey)->timeout(120)->post('https://api.openai.com/v1/chat/completions', [
                 'model' => 'gpt-4o-2024-08-06',
                 'messages' => [
                     ['role' => 'system', 'content' => 'You are a data analysis assistant. Output valid JSON only.'],
@@ -428,5 +473,12 @@ PROMPT;
 
         // 7. Truncate to 63 characters (PostgreSQL max identifier length)
         return substr($name, 0, 63);
+    }
+
+    protected function normalizeHeader(string $header): string
+    {
+        $normalized = mb_strtolower($header);
+        $normalized = preg_replace('/[^a-z0-9]/', '', $normalized); // remove non-alphanum
+        return $normalized;
     }
 }
