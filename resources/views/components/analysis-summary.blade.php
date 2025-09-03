@@ -12,6 +12,7 @@
         </x-filament::section>
     @endif
 
+    <p>&nbsp;</p>
     {{-- Columns Block --}}
     @if (!empty($columns))
         <x-filament::section>
@@ -24,11 +25,11 @@
                     <tbody>
                     @foreach ($columns as $pgName => $col)
                         <tr class="border-b last:border-none">
-                            <td class="py-2 px-3 font-semibold text-gray-900">
-                                <div class="text-xs text-gray-500 italic">{{ $pgName }}</div>
+                            <td>
+                                <div class="text-xs  p-2">{{ $pgName }}</div>
                             </td>
-                            <td class="py-2 px-3 text-gray-700">
-                                {{ is_array($col['meaning']) ? implode(', ', $col['meaning']) : $col['meaning'] }}
+                            <td>
+                                &nbsp;-&nbsp;{{ is_array($col['meaning']) ? implode(', ', $col['meaning']) : $col['meaning'] }}
                             </td>
                         </tr>
                     @endforeach
@@ -37,6 +38,8 @@
             </div>
         </x-filament::section>
     @endif
+
+    <p>&nbsp;</p>
 
     {{-- Validation Issues Block --}}
     @if (!empty($validationIssues))
@@ -50,10 +53,13 @@
                     <tbody>
                     @foreach ($validationIssues as $pgName => $issue)
                         <tr class="border-b last:border-none">
-                            <td class="py-2 px-3 font-semibold text-gray-900">
-                                {{ $pgName }}
+                            <td>
+                                <div class="text-xs  p-2">
+                                    {{ $pgName }}
+                                </div>
                             </td>
-                            <td class="py-2 px-3 text-gray-700">
+                            <td>
+                                &nbsp;-&nbsp;
                                 @if (is_array($issue))
                                     {!! implode('<br>', array_map('e', $issue)) !!}
                                 @else
@@ -67,6 +73,8 @@
             </div>
         </x-filament::section>
     @endif
+
+    <p>&nbsp;</p>
 
     {{-- Entities Block --}}
     @if (!empty($entities))
