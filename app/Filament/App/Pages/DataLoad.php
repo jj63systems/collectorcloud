@@ -41,6 +41,9 @@ class DataLoad extends Page implements HasForms
     public array $validationIssues = [];
     public array $entities = [];
 
+    public array $selectedEntities = [];
+
+
     public function mount(): void
     {
         $this->data = [
@@ -131,35 +134,11 @@ class DataLoad extends Page implements HasForms
                             ])
                             ->visible(fn() => $this->data['status'] === 'complete'),
 
-//                        TextEntry::make('data.analysis_summary')
-//                            ->label('What the data appears to represent')
-//                            ->state(fn() => $this->data['analysis_summary'])
-//                            ->hidden(fn() => $this->data['status'] !== 'complete')
-//                            ->html(),
-//
-//
-//                        TextEntry::make('data.analysis_columns')
-//                            ->label('Columns and their likely meanings')
-//                            ->state(fn() => $this->data['analysis_columns'] ?? [])
-//                            ->html()
-//                            ->hidden(fn() => $this->data['status'] !== 'complete'),
-//
-//                        TextEntry::make('data.analysis_issues')
-//                            ->label('Validation issues')
-//                            ->state(fn() => $this->data['analysis_issues'])
-//                            ->hidden(fn() => $this->data['status'] !== 'complete')
-//                            ->html(),
-//
-//                        TextEntry::make('data.entities')
-//                            ->label('Entities')
-//                            ->state(fn() => $this->data['entities'])
-//                            ->hidden(fn() => $this->data['status'] !== 'complete')
-//                            ->html(),
 
                         TextEntry::make('data.analysis_loader')
                             ->state('⏳ Analysing file, please wait...')
                             ->visible(fn() => $this->data['status'] !== 'complete')
-                            ->extraAttributes(['class' => 'animate-pulse text-gray-500'])
+                            ->extraAttributes(['class' => 'animate-pulse bg-gray-100 rounded-md p-2 mb-4 text-sm'])
                             ->html(),
                     ])
             ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
@@ -221,6 +200,9 @@ class DataLoad extends Page implements HasForms
                 return [$key => $entity['detected'] ? ($examples[0] ?? '—') : null];
             })
             ->toArray();
+
+        // Auto-select detected entities by default
+        $this->selectedEntities = array_keys(array_filter($this->entities, fn($v) => !is_null($v)));
 
         $this->data['status'] = 'complete';
 

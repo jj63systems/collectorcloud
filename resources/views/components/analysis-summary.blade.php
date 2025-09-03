@@ -85,20 +85,29 @@
 
             <p class="text-sm text-gray-700 whitespace-pre-line">
                 Based on the analysis of the column headings and likely content, we think the following system entities
-                are represented or referenced within your upload.
-            <ul class="list-none space-y-1 text-sm text-gray-800">
+                are represented or referenced within your upload. Please select those which you would like to import or
+                use.
+            </p>
+
+            @php
+                $checkboxFieldName = 'selectedEntities';
+            @endphp
+
+            <div class="mt-4 space-y-2 bg-gray-100 rounded-md">
                 @foreach ($entities as $entity => $example)
-                    <li class="flex items-start">
-                        <span class="mr-2">
-                            {{ $example ? '✅' : '❌' }}
-                        </span>
-                        <span class="font-semibold uppercase">{{ $entity }}</span>
-                        <span class="ml-2 text-gray-600">
-                            (e.g. {{ is_string($example) ? e($example) : '—' }})
-                        </span>
-                    </li>
+                    <label class="flex items-center space-x-2 text-sm text-gray-800">
+                        <input
+                            type="checkbox"
+                            wire:model.defer="{{ $checkboxFieldName }}"
+                            value="{{ $entity }}"
+                            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
+                        />
+
+                        <span class="font-semibold uppercase p-4 mt-4">{{ $entity }}</span>
+                    </label>
                 @endforeach
-            </ul>
+            </div>
+
         </x-filament::section>
     @endif
 
