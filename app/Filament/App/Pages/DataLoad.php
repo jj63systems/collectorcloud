@@ -50,6 +50,11 @@ class DataLoad extends Page implements HasForms
     protected array $headerMap = []; // normalized_name => original_header
 
 
+    public array $availableSpreadsheetHeaders = []; // e.g. ['Donor Name', 'Donor ID', 'Location']
+    public array $structuredFieldMappings = [];     // e.g. ['donors.donor_name' => 'Donor Name']
+    public array $unmappedFieldActions = [];        // e.g. ['Condition' => 'legacy', 'Notes' => 'discard']
+
+
     // --- end of variables ------------------------------
 
 
@@ -151,7 +156,16 @@ class DataLoad extends Page implements HasForms
                             ->visible(fn() => $this->data['status'] !== 'complete')
                             ->extraAttributes(['class' => 'animate-pulse bg-gray-100 rounded-md p-2 mb-4 text-sm'])
                             ->html(),
-                    ])
+                    ]),
+                Step::make('Map Columns')
+                    ->schema([
+                        ViewField::make('mapping_placeholder')
+                            ->view('filament.app.components.step-three-mapping', [
+                                'availableSpreadsheetHeaders' => $this->availableSpreadsheetHeaders,
+                                'structuredEntities' => $this->getStructuredFieldsForSelectedEntities(),
+                            ])
+                            ->visible(fn() => filled($this->selectedEntities)),
+                    ]),
             ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
         ];
     }
@@ -226,6 +240,8 @@ class DataLoad extends Page implements HasForms
         $this->selectedEntities = array_keys(array_filter($this->entities, fn($v) => !is_null($v)));
 
         $this->data['status'] = 'complete';
+
+        $this->availableSpreadsheetHeaders = array_values($this->headerMap ?? []);
 
         \Log::info('Analysis complete', ['rowsAnalysed' => $this->rowsAnalysed]);
     }
@@ -304,12 +320,7 @@ If a column appears to be a location (i.e., a place where an item may be found),
 Tasks:
 1) Give a short high-level summary of the content in general terms - be clear that the analysis is based on only a small number of records sampled.
 2) List the columns and what each likely represents.
-3) Identify any columns that appear to contain dates or numbers, and list only the values that are invalid or ambiguous.
-   - A valid date can be in any commonly used format (e.g. dd/mm/yyyy, yyyy-mm-dd, 1-Jul-2019, Excel-style serial numbers like 43633, etc.).
-   - If the format is valid but ambiguous (e.g. 03/04/21), assume UK date order (dd/mm/yyyy) unless obviously inconsistent with surrounding data.
-   - Do not report valid values as invalid just because the format varies.
-   - When listing validation issues, ensure that the data value that appears incorrect is listed under its corresponding column name.
-4) From the following list of possible entities, assess whether each is effectively referenced in the data:
+3) From the following list of possible entities, assess whether each is effectively referenced in the data:
    LOCATIONS, DONORS, DONATIONS, ITEMS.
    For each, return:
    - The entity name
@@ -323,8 +334,6 @@ Respond EXACTLY as JSON:
     { "name": "...", "meaning": "..." }
   ],
   "validation_issues": {
-    "Column A": ["invalid date", "not a number"],
-    "Column B": ["..."]
   },
   "entities": [
     { "name": "LOCATIONS", "detected": true, "examples": ["Room 1", "Hangar A"] },
@@ -480,5 +489,64 @@ PROMPT;
         $normalized = mb_strtolower($header);
         $normalized = preg_replace('/[^a-z0-9]/', '', $normalized); // remove non-alphanum
         return $normalized;
+    }
+
+    protected function getStructuredFieldsForSelectedEntities(): array
+    {
+        $all = $this->getStructuredFieldsByEntity();
+
+        return collect($this->selectedEntities)
+            ->filter(fn($entity) => isset($all[$entity]))
+            ->mapWithKeys(fn($entity) => [$entity => $all[$entity]])
+            ->toArray();
+    }
+
+    protected function getStructuredFieldsByEntity(): array
+    {
+        return [
+            'LOCATIONS' => [
+                'cc_locations.name' => ['label' => 'Name', 'type' => 'string'],
+                'cc_locations.type' => ['label' => 'Type', 'type' => 'string'],
+                'cc_locations.comments' => ['label' => 'Comments', 'type' => 'text'],
+            ],
+            'DONORS' => [
+                'cc_donors.name' => ['label' => 'Name', 'type' => 'string'],
+                'cc_donors.address_line_1' => ['label' => 'Address Line 1', 'type' => 'string'],
+                'cc_donors.address_line_2' => ['label' => 'Address Line 2', 'type' => 'string'],
+                'cc_donors.city' => ['label' => 'City', 'type' => 'string'],
+                'cc_donors.county' => ['label' => 'County', 'type' => 'string'],
+                'cc_donors.postcode' => ['label' => 'Postcode', 'type' => 'string'],
+                'cc_donors.country' => ['label' => 'Country', 'type' => 'string'],
+                'cc_donors.telephone' => ['label' => 'Telephone', 'type' => 'string'],
+                'cc_donors.address_old' => ['label' => 'Address Old', 'type' => 'text'],
+                'cc_donors.email' => ['label' => 'Email', 'type' => 'string'],
+            ],
+            'DONATIONS' => [
+                'cc_donations.donor_id' => ['label' => 'Donor Id', 'type' => 'string'],
+                'cc_donations.date_received' => ['label' => 'Date Received', 'type' => 'date'],
+                'cc_donations.donation_basis' => ['label' => 'Donation Basis', 'type' => 'string'],
+                'cc_donations.donation_name' => ['label' => 'Donation Name', 'type' => 'string'],
+                'cc_donations.comments' => ['label' => 'Comments', 'type' => 'text'],
+                'cc_donations.donation_basis_old' => ['label' => 'Donation Basis Old', 'type' => 'text'],
+                'cc_donations.accessioned_by' => ['label' => 'Accessioned By', 'type' => 'string'],
+                'cc_donations.accessioned_by_old' => ['label' => 'Accessioned By Old', 'type' => 'text'],
+                'cc_donations.donor_key_old' => ['label' => 'Donor Key Old', 'type' => 'string'],
+                'cc_donations.year_received_old' => ['label' => 'Year Received Old', 'type' => 'string'],
+            ],
+            'ITEMS' => [
+                'cc_items.donation_id' => ['label' => 'Donation Id', 'type' => 'string'],
+                'cc_items.item_key' => ['label' => 'Item Key', 'type' => 'string'],
+                'cc_items.item_type' => ['label' => 'Item Type', 'type' => 'string'],
+                'cc_items.description' => ['label' => 'Description', 'type' => 'text'],
+                'cc_items.location_id' => ['label' => 'Location Id', 'type' => 'string'],
+                'cc_items.condition_notes' => ['label' => 'Condition Notes', 'type' => 'text'],
+                'cc_items.disposed' => ['label' => 'Disposed', 'type' => 'boolean'],
+                'cc_items.disposed_notes' => ['label' => 'Disposed Notes', 'type' => 'text'],
+                'cc_items.disposed_date' => ['label' => 'Disposed Date', 'type' => 'date'],
+                'cc_items.filing_reference' => ['label' => 'Filing Reference', 'type' => 'text'],
+                'cc_items.date_received' => ['label' => 'Date Received', 'type' => 'date'],
+                'cc_items.checked_by_user_id' => ['label' => 'Checked By User Id', 'type' => 'string'],
+            ],
+        ];
     }
 }
