@@ -12,7 +12,6 @@
         </x-filament::section>
     @endif
 
-    <p>&nbsp;</p>
     {{-- Columns Block --}}
     @if (!empty($columns))
         <x-filament::section>
@@ -24,9 +23,9 @@
                 <table class="min-w-full text-sm text-left">
                     <tbody>
                     @foreach ($columns as $pgName => $col)
-                        <tr class="border-b last:border-none">
+                        <tr class="last:border-none">
                             <td>
-                                <div class="text-xs  p-2">{{ $pgName }}</div>
+                                <div class="p-2">{{ $pgName }}</div>
                             </td>
                             <td>
                                 &nbsp;-&nbsp;{{ is_array($col['meaning']) ? implode(', ', $col['meaning']) : $col['meaning'] }}
@@ -39,7 +38,6 @@
         </x-filament::section>
     @endif
 
-    <p>&nbsp;</p>
 
     {{-- Validation Issues Block --}}
     @if (!empty($validationIssues))
@@ -52,13 +50,13 @@
                 <table class="min-w-full text-sm text-left">
                     <tbody>
                     @foreach ($validationIssues as $pgName => $issue)
-                        <tr class="border-b last:border-none">
+                        <tr class="last:border-none">
                             <td>
-                                <div class="text-xs  p-2">
+                                <div class="p-2">
                                     {{ $pgName }}
                                 </div>
                             </td>
-                            <td>
+                            <td class="align-left">
                                 &nbsp;-&nbsp;
                                 @if (is_array($issue))
                                     {!! implode('<br>', array_map('e', $issue)) !!}
@@ -74,7 +72,6 @@
         </x-filament::section>
     @endif
 
-    <p>&nbsp;</p>
 
     {{-- Entities Block --}}
     @if (!empty($entities))
@@ -93,18 +90,21 @@
                 $checkboxFieldName = 'selectedEntities';
             @endphp
 
-            <div class="mt-4 space-y-2 bg-gray-100 rounded-md">
+            <div class="mt-6 bg-gray-100 rounded-md p-6 space-y-4">
                 @foreach ($entities as $entity => $example)
-                    <label class="flex items-center space-x-2 text-sm text-gray-800">
-                        <input
-                            type="checkbox"
-                            wire:model.defer="{{ $checkboxFieldName }}"
-                            value="{{ $entity }}"
-                            class="rounded border-gray-300 text-primary-600 shadow-sm focus:ring-primary-500"
-                        />
+                    <div class="pt-2">
+                        <label class="flex items-start gap-3 text-base text-gray-800">
+                            <input
+                                type="checkbox"
+                                wire:model.defer="{{ $checkboxFieldName }}"
+                                value="{{ $entity }}"
+                                class="mt-1 h-5 w-5 rounded border-gray-300 text-primary-600 shadow focus:ring-primary-500"
+                            />
 
-                        <span class="font-semibold uppercase p-4 mt-4">{{ $entity }}</span>
-                    </label>
+                            <span class="font-semibold uppercase">{{ $entity }}</span>
+                        </label>
+                    </div>
+
                 @endforeach
             </div>
 
