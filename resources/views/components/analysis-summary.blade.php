@@ -90,22 +90,25 @@
                 $checkboxFieldName = 'selectedEntities';
             @endphp
 
-            <div class="mt-6 bg-gray-100 rounded-md p-6 space-y-4">
-                @foreach ($entities as $entity => $example)
-                    <div class="pt-2">
-                        <label class="flex items-start gap-3 text-base text-gray-800">
+            <div class="mt-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @foreach ($entities as $entity => $example)
+                        @php
+                            $inputId = 'entity-' . $loop->index;
+                        @endphp
+                        <label for="{{ $inputId }}"
+                               class="flex items-center gap-6 rounded-lg p-4 transition focus-within:ring-2 focus-within:ring-primary-500">
                             <input
+                                id="{{ $inputId }}"
                                 type="checkbox"
                                 wire:model.defer="{{ $checkboxFieldName }}"
                                 value="{{ $entity }}"
-                                class="mt-1 h-5 w-5 rounded border-gray-300 text-primary-600 shadow focus:ring-primary-500"
+                                class="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                             />
-
-                            <span class="font-semibold uppercase">{{ $entity }}</span>
+                            <span class="font-semibold uppercase text-gray-900">{{ $entity }}</span>
                         </label>
-                    </div>
-
-                @endforeach
+                    @endforeach
+                </div>
             </div>
 
         </x-filament::section>
