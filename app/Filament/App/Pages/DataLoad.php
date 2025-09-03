@@ -224,7 +224,7 @@ class DataLoad extends Page implements HasForms
 
         $this->data['status'] = 'complete';
 
-        \Log::info('Analysis complete', ['data' => $this->data]);
+        \Log::info('Analysis complete');
     }
 
     protected function extractTextFromFile(string $path): string
@@ -319,7 +319,7 @@ PROMPT;
                 'response_format' => ['type' => 'json_object'],
             ]);
 
-            \Log::info('Raw OpenAI response body: '.$response->body());
+//            \Log::info('Raw OpenAI response body: '.$response->body());
 
             $json = $response->json();
             $content = $json['choices'][0]['message']['content'] ?? '';
@@ -345,7 +345,7 @@ PROMPT;
     {
 
 
-        \Log::info('Starting processUploadAndAnalyse', ['rawAttachment' => $this->attachment]);
+        \Log::info('Starting processUploadAndAnalyse');
 
         $this->resetAnalysisFields();
 
