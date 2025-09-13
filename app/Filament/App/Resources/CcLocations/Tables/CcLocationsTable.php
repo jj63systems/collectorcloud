@@ -19,10 +19,10 @@ class CcLocationsTable
                     ->sortable()
                     ->searchable(),
 
-                TextColumn::make('parent.name')
-                    ->label('Parent')
-                    ->sortable()
-                    ->toggleable(),
+//                TextColumn::make('parent.name')
+//                    ->label('Parent')
+//                    ->sortable()
+//                    ->toggleable(),
 
 
                 TextColumn::make('path')
@@ -42,7 +42,7 @@ class CcLocationsTable
             ])
             ->defaultSort('path')
             ->recordActions([
-                ViewAction::make(),
+//                ViewAction::make(),
                 EditAction::make()->slideOver(),
                 // ...
             ]);

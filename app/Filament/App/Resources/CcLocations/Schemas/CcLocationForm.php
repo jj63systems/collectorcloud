@@ -3,15 +3,23 @@
 namespace App\Filament\App\Resources\CcLocations\Schemas;
 
 use App\Models\Tenant\CcLocation;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rule;
+
 
 class CcLocationForm
 {
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
+
+
+            TextInput::make('path')
+                ->label('Full Path')
+                ->readOnly(),
 
             Select::make('parent_id')
                 ->label('Parent Location')
@@ -36,14 +44,12 @@ class CcLocationForm
 //                ->maxLength(50)
 //                ->nullable(),
 
-        
+
             TextInput::make('depth')
                 ->label('Depth')
                 ->readOnly(),
+            
 
-            TextInput::make('path')
-                ->label('Full Path')
-                ->readOnly(),
         ]);
     }
 }
