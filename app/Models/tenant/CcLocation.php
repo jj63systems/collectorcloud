@@ -3,11 +3,14 @@
 namespace App\Models\tenant;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
+
 
 class CcLocation extends Model
 {
-    use UsesTenantConnection;
+    use UsesTenantConnection, LogsActivity;
 
     protected $fillable = [
         'name',
@@ -65,5 +68,12 @@ class CcLocation extends Model
                 $child->updateHierarchyMetadata();
             }
         });
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logAll() // logs all attributes that are changed
+            ->useLogName('cc_location'); // optional: use a custom log name
     }
 }
