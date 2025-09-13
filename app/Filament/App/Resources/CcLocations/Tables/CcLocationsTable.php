@@ -2,11 +2,11 @@
 
 namespace App\Filament\App\Resources\CcLocations\Tables;
 
+use App\Filament\App\Resources\CcLocations\CcLocationResource;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
-use Filament\Actions\ViewAction;
-use Filament\Tables\Table;
-use Filament\Tables\Actions;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
 
 class CcLocationsTable
 {
@@ -44,6 +44,8 @@ class CcLocationsTable
             ->recordActions([
 //                ViewAction::make(),
                 EditAction::make()->slideOver(),
+                Action::make('activities')->url(fn($record) => CcLocationResource::getUrl('activities',
+                    ['record' => $record])),
                 // ...
             ]);
     }

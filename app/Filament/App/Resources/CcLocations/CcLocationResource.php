@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources\CcLocations;
 
 use App\Filament\App\Resources\CcLocations\Pages\CreateCcLocation;
-use App\Filament\App\Resources\CcLocations\Pages\EditCcLocation;
 use App\Filament\App\Resources\CcLocations\Pages\ListCcLocations;
 use App\Filament\App\Resources\CcLocations\Schemas\CcLocationForm;
 use App\Filament\App\Resources\CcLocations\Tables\CcLocationsTable;
@@ -44,6 +43,8 @@ class CcLocationResource extends Resource
         return [
             'index' => ListCcLocations::route('/'),
             'create' => CreateCcLocation::route('/create'),
+            'activities' => Pages\ListLocationActivities::route('/{record}/activities'),
+
 //            'edit' => EditCcLocation::route('/{record}/edit'),
         ];
     }
