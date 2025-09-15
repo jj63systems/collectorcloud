@@ -7,7 +7,6 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
-
 class CcLocation extends Model
 {
     use UsesTenantConnection, LogsActivity;
@@ -17,7 +16,7 @@ class CcLocation extends Model
         'parent_id',
         'type',
         'code',
-        'path',   // now stores the *human-readable* full name path
+        'path',
         'depth',
     ];
 
@@ -29,6 +28,11 @@ class CcLocation extends Model
     public function children()
     {
         return $this->hasMany(self::class, 'parent_id');
+    }
+
+    public function type()
+    {
+        return $this->belongsTo(\App\Models\tenant\CcLookupValue::class, 'type_id');
     }
 
     public function computeDepth(): int
@@ -43,31 +47,27 @@ class CcLocation extends Model
             : $this->name;
     }
 
-    public function updateHierarchyMetadata(): void
+    public function updatePathAndDepthRecursively(int $level = 0): void
     {
-        $this->depth = $this->computeDepth();
-        $this->path = $this->computePath();
-        $this->saveQuietly(); // Prevent re-triggering events
+        if ($level > 20) {
+            \Log::warning("Recursion limit hit updating location path/depth at ID {$this->id}");
+            return;
+        }
+
+        $newDepth = $this->computeDepth();
+        $newPath = $this->computePath();
+
+        if ($this->depth !== $newDepth || $this->path !== $newPath) {
+            $this->depth = $newDepth;
+            $this->path = $newPath;
+            $this->saveQuietly();
+        }
+
+        $this->loadMissing('children');
 
         foreach ($this->children as $child) {
-            $child->updateHierarchyMetadata();
+            $child->updatePathAndDepthRecursively($level + 1);
         }
-    }
-
-    protected static function booted(): void
-    {
-        static::saving(function (CcLocation $location) {
-            $location->depth = $location->computeDepth();
-            $location->path = $location->computePath();
-        });
-
-        static::saved(function (CcLocation $location) {
-            $location->load('children');
-
-            foreach ($location->children as $child) {
-                $child->updateHierarchyMetadata();
-            }
-        });
     }
 
     public function getActivitylogOptions(): LogOptions
@@ -75,19 +75,11 @@ class CcLocation extends Model
         return LogOptions::defaults()
             ->logOnly(['name', 'parent_id', 'type', 'code', 'path', 'depth'])
             ->useLogName('Locations')
-            ->logOnlyDirty(); // optional: use a custom log name
+            ->logOnlyDirty();
     }
 
     public function canDelete(): bool
     {
-        return !$this->children()->exists(); // Fast + memory efficient
+        return !$this->children()->exists();
     }
-
-
-    public function type()
-    {
-        return $this->belongsTo(\App\Models\tenant\CcLookupValue::class, 'type_id');
-    }
-
-
 }

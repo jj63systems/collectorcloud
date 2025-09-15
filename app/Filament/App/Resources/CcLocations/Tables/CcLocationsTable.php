@@ -2,13 +2,7 @@
 
 namespace App\Filament\App\Resources\CcLocations\Tables;
 
-use App\Filament\App\Resources\CcLocations\CcLocationResource;
-use App\Models\tenant\CcLocation;
-use Filament\Actions\Action;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\EditAction;
-use Filament\Notifications\Notification;
-use Filament\Support\Exceptions\Halt;
+use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -63,21 +57,21 @@ class CcLocationsTable
 //                    ->toggleable(),
             ])
             ->recordActions([
-//                ViewAction::make(),
-                EditAction::make()->slideOver(),
-                DeleteAction::make()->slideOver()
-                    ->visible(fn(CcLocation $record) => $record->canDelete())
-                    ->before(function (CcLocation $record) {
-                        if (!$record->canDelete()) {
-                            Notification::make()
-                                ->title('This location has child locations and cannot be deleted.')
-                                ->danger()
-                                ->send();
-                            throw new Halt();
-                        }
-                    }),
-                Action::make('activities')->url(fn($record) => CcLocationResource::getUrl('activities',
-                    ['record' => $record])),
+                ViewAction::make(),
+//                EditAction::make()->slideOver(),
+//                DeleteAction::make()->slideOver()
+//                    ->visible(fn(CcLocation $record) => $record->canDelete())
+//                    ->before(function (CcLocation $record) {
+//                        if (!$record->canDelete()) {
+//                            Notification::make()
+//                                ->title('This location has child locations and cannot be deleted.')
+//                                ->danger()
+//                                ->send();
+//                            throw new Halt();
+//                        }
+//                    }),
+//                Action::make('activities')->url(fn($record) => CcLocationResource::getUrl('activities',
+//                    ['record' => $record])),
                 // ...
             ]);
     }
