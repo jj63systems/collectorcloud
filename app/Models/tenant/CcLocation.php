@@ -82,4 +82,12 @@ class CcLocation extends Model
     {
         return !$this->children()->exists(); // Fast + memory efficient
     }
+
+
+    public function type()
+    {
+        return $this->belongsTo(\App\Models\tenant\CcLookupValue::class, 'type_id');
+    }
+
+
 }

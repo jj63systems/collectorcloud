@@ -3,6 +3,7 @@
 namespace Database\Seeders\tenant;
 
 use App\Models\tenant\CcLocation;
+use App\Models\tenant\CcLookupValue;
 use App\Models\tenant\TenantActivity;
 use Illuminate\Database\Seeder;
 
@@ -11,11 +12,22 @@ class TestLocationSeeder extends Seeder
     public function run(): void
     {
         // Remove activity logs just for CcLocation
-        TenantActivity::whereIn('log_name', ['Locations', 'cc_location'])
-            ->delete();
+        TenantActivity::whereIn('log_name', ['Locations', 'cc_location'])->delete();
 
-        // Now clear the test data itself
+        // Clear the test locations
         CcLocation::truncate();
+
+        // Ensure all required lookup codes exist
+        $requiredCodes = ['SITE', 'BUILDING', 'ROOM', 'CABINET', 'CONTAINER'];
+        $types = [];
+
+        foreach ($requiredCodes as $code) {
+            $id = CcLookupValue::where('code', $code)->value('id');
+            if (!$id) {
+                throw new \Exception("Missing required lookup value for code: $code");
+            }
+            $types[$code] = $id;
+        }
 
         $total = 0;
         $sites = collect();
@@ -24,7 +36,7 @@ class TestLocationSeeder extends Seeder
         for ($i = 1; $i <= 5; $i++) {
             $site = CcLocation::create([
                 'name' => "Site $i",
-                'type' => 'Site',
+                'type_id' => $types['SITE'],
                 'parent_id' => null,
                 'depth' => 1,
             ]);
@@ -37,7 +49,7 @@ class TestLocationSeeder extends Seeder
             for ($i = 1; $i <= 4; $i++) {
                 $building = CcLocation::create([
                     'name' => "Building $i",
-                    'type' => 'Building',
+                    'type_id' => $types['BUILDING'],
                     'parent_id' => $site->id,
                     'depth' => 2,
                 ]);
@@ -51,7 +63,7 @@ class TestLocationSeeder extends Seeder
             for ($i = 1; $i <= 5; $i++) {
                 $room = CcLocation::create([
                     'name' => "Room $i",
-                    'type' => 'Room',
+                    'type_id' => $types['ROOM'],
                     'parent_id' => $building->id,
                     'depth' => 3,
                 ]);
@@ -60,36 +72,36 @@ class TestLocationSeeder extends Seeder
             }
         }
 
-        $units = collect();
+        $cabinets = collect();
         foreach ($rooms as $room) {
             for ($i = 1; $i <= 3; $i++) {
-                $unit = CcLocation::create([
-                    'name' => "Unit $i",
-                    'type' => 'Unit',
+                $cabinet = CcLocation::create([
+                    'name' => "Cabinet $i",
+                    'type_id' => $types['CABINET'],
                     'parent_id' => $room->id,
                     'depth' => 4,
                 ]);
-                $units->push($unit);
+                $cabinets->push($cabinet);
                 $total++;
             }
         }
 
-        foreach ($units as $unit) {
+        foreach ($cabinets as $cabinet) {
             for ($i = 1; $i <= 2; $i++) {
                 CcLocation::create([
                     'name' => "Container $i",
-                    'type' => 'Container',
-                    'parent_id' => $unit->id,
+                    'type_id' => $types['CONTAINER'],
+                    'parent_id' => $cabinet->id,
                     'depth' => 5,
                 ]);
                 $total++;
 
                 if ($total >= 500) {
-                    break 2;
-                } // Stop at 500 total
+                    break 2; // Exit both loops when total hits 500
+                }
             }
         }
 
-        $this->command->info("Seeded $total locations without parent-type repetition in names.");
+        $this->command->info("Seeded $total locations using type_id from lookup values.");
     }
 }

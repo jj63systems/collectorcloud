@@ -11,13 +11,23 @@ use Filament\Notifications\Notification;
 use Filament\Support\Exceptions\Halt;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CcLocationsTable
 {
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn(Builder $query) => $query->withCount('children')) // ✅ this is the right method
             ->columns([
+
+                TextColumn::make('id')
+                    ->label('Location Id')
+                    ->sortable()
+                    ->searchable()
+                    ->alignEnd()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('name')
                     ->label('Location Name')
                     ->sortable()
@@ -34,17 +44,24 @@ class CcLocationsTable
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('type')
-                    ->label('Type')
+                TextColumn::make('type.label') // Updated to show related lookup value's label
+                ->label('Type')
                     ->sortable()
                     ->toggleable(),
 
-                TextColumn::make('code')
-                    ->label('Code')
+                TextColumn::make('children_count')
+                    ->label('Child Locations')
                     ->sortable()
+                    ->numeric()
+                    ->alignEnd()
                     ->toggleable(),
+
+
+//                TextColumn::make('code')
+//                    ->label('Code')
+//                    ->sortable()
+//                    ->toggleable(),
             ])
-            ->defaultSort('path')
             ->recordActions([
 //                ViewAction::make(),
                 EditAction::make()->slideOver(),

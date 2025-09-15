@@ -24,10 +24,20 @@ class CcLocationForm
                             ->required()
                             ->maxLength(255),
 
-                        TextInput::make('type')
-                            ->label('Type (e.g., Room, Shelf)')
-                            ->maxLength(50)
-                            ->nullable(),
+
+                        Select::make('type_id')
+                            ->label('Type')
+//                            ->relationship('type', 'label') // assumes you want to display the label
+                            ->options(
+                                \App\Models\Tenant\CcLookupValue::enabled()
+                                    ->whereHas('type', fn($q) => $q->where('code', 'LOCATION_TYPE'))
+                                    ->orderBy('sort_order')
+                                    ->pluck('label', 'id')
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->columnSpanFull(),
                     ]),
                 ]),
 
@@ -46,15 +56,18 @@ class CcLocationForm
 
             Section::make('System Fields')
                 ->description('These values are automatically calculated.')
-                ->collapsed()
+                ->collapsed(false)
+                ->columnSpanFull()
                 ->schema([
                     Grid::make(2)->schema([
                         TextInput::make('path')
                             ->label('Full Path')
+                            ->disabled()
                             ->readOnly(),
 
                         TextInput::make('depth')
                             ->label('Depth')
+                            ->disabled()
                             ->readOnly(),
                     ]),
                 ]),
