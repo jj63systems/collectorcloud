@@ -73,7 +73,13 @@ class CcLocation extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logAll() // logs all attributes that are changed
-            ->useLogName('cc_location'); // optional: use a custom log name
+            ->logOnly(['name', 'parent_id', 'type', 'code', 'path', 'depth'])
+            ->useLogName('Locations')
+            ->logOnlyDirty(); // optional: use a custom log name
+    }
+
+    public function canDelete(): bool
+    {
+        return !$this->children()->exists(); // Fast + memory efficient
     }
 }

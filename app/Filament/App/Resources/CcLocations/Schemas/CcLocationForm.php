@@ -3,12 +3,11 @@
 namespace App\Filament\App\Resources\CcLocations\Schemas;
 
 use App\Models\Tenant\CcLocation;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Illuminate\Validation\Rule;
-
 
 class CcLocationForm
 {
@@ -16,40 +15,49 @@ class CcLocationForm
     {
         return $schema->components([
 
+            Section::make('Location Details')
+                ->description('Enter the name and type of this location.')
+                ->schema([
+                    Grid::make(2)->schema([
+                        TextInput::make('name')
+                            ->label('Location Name')
+                            ->required()
+                            ->maxLength(255),
 
-            TextInput::make('path')
-                ->label('Full Path')
-                ->readOnly(),
+                        TextInput::make('type')
+                            ->label('Type (e.g., Room, Shelf)')
+                            ->maxLength(50)
+                            ->nullable(),
+                    ]),
+                ]),
 
-            Select::make('parent_id')
-                ->label('Parent Location')
-                ->options(fn() => CcLocation::all()->pluck('path', 'id'))
-                ->searchable()
-                ->preload()
-                ->nullable(),
+            Section::make('Hierarchy')
+                ->description('Set the parent location to build the hierarchy.')
+                ->schema([
+                    Grid::make(1)->schema([
+                        Select::make('parent_id')
+                            ->label('Parent Location')
+                            ->options(fn() => CcLocation::all()->pluck('path', 'id'))
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+                    ]),
+                ]),
 
-            TextInput::make('name')
-                ->label('Location Name')
-                ->required()
-                ->maxLength(255),
+            Section::make('System Fields')
+                ->description('These values are automatically calculated.')
+                ->collapsed()
+                ->schema([
+                    Grid::make(2)->schema([
+                        TextInput::make('path')
+                            ->label('Full Path')
+                            ->readOnly(),
 
-
-            TextInput::make('type')
-                ->label('Type (e.g., Room, Shelf)')
-                ->maxLength(50)
-                ->nullable(),
-//
-//            TextInput::make('code')
-//                ->label('Reference Code')
-//                ->maxLength(50)
-//                ->nullable(),
-
-
-            TextInput::make('depth')
-                ->label('Depth')
-                ->readOnly(),
-            
-
+                        TextInput::make('depth')
+                            ->label('Depth')
+                            ->readOnly(),
+                    ]),
+                ]),
         ]);
     }
 }
