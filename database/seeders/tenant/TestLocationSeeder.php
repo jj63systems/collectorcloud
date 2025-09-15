@@ -38,7 +38,6 @@ class TestLocationSeeder extends Seeder
                 'name' => "Site $i",
                 'type_id' => $types['SITE'],
                 'parent_id' => null,
-                'depth' => 1,
             ]);
             $sites->push($site);
             $total++;
@@ -51,7 +50,6 @@ class TestLocationSeeder extends Seeder
                     'name' => "Building $i",
                     'type_id' => $types['BUILDING'],
                     'parent_id' => $site->id,
-                    'depth' => 2,
                 ]);
                 $buildings->push($building);
                 $total++;
@@ -65,7 +63,6 @@ class TestLocationSeeder extends Seeder
                     'name' => "Room $i",
                     'type_id' => $types['ROOM'],
                     'parent_id' => $building->id,
-                    'depth' => 3,
                 ]);
                 $rooms->push($room);
                 $total++;
@@ -79,7 +76,6 @@ class TestLocationSeeder extends Seeder
                     'name' => "Cabinet $i",
                     'type_id' => $types['CABINET'],
                     'parent_id' => $room->id,
-                    'depth' => 4,
                 ]);
                 $cabinets->push($cabinet);
                 $total++;
@@ -92,7 +88,6 @@ class TestLocationSeeder extends Seeder
                     'name' => "Container $i",
                     'type_id' => $types['CONTAINER'],
                     'parent_id' => $cabinet->id,
-                    'depth' => 5,
                 ]);
                 $total++;
 
@@ -101,6 +96,8 @@ class TestLocationSeeder extends Seeder
                 }
             }
         }
+
+        CcLocation::updateAllPathsAndDepths();
 
         $this->command->info("Seeded $total locations using type_id from lookup values.");
     }

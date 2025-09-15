@@ -25,6 +25,8 @@ class TenantDatabaseSeeder extends Seeder
 
         ]);
 
+        activity()->disableLogging();
+
         // Call the lookup seeder
         $this->call(CcLookupSeeder::class);
 

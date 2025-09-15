@@ -15,6 +15,8 @@ class TenantTestDataSeeder extends Seeder
     public function run(): void
     {
 
+        activity()->disableLogging();
+
         $this->call(TestLocationSeeder::class);
 
 

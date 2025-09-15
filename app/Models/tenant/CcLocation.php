@@ -82,4 +82,9 @@ class CcLocation extends Model
     {
         return !$this->children()->exists();
     }
+
+    public static function updateAllPathsAndDepths(): void
+    {
+        static::whereNull('parent_id')->get()->each->updatePathAndDepthRecursively();
+    }
 }
