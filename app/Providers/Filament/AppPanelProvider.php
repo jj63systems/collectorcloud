@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\App\Pages\DataLoad;
 use App\Http\Middleware\MyMiddleware;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -23,6 +24,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession;
 use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 
+
 class AppPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -32,6 +34,12 @@ class AppPanelProvider extends PanelProvider
             ->path('app')
             ->login()
             ->authGuard('tenant')
+            ->multiFactorAuthentication(
+                [
+                    EmailAuthentication::make()->codeExpiryMinutes(5),
+                ],
+                isRequired: true
+            )
             ->brandName('CollectorCloud')
             ->colors([
                 'primary' => Color::Sky,
