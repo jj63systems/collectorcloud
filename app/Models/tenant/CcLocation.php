@@ -83,8 +83,35 @@ class CcLocation extends Model
         return !$this->children()->exists();
     }
 
+
+    //
+    // This function is called only from the test data seeder so could potentially be moved into the seeder
     public static function updateAllPathsAndDepths(): void
     {
         static::whereNull('parent_id')->get()->each->updatePathAndDepthRecursively();
     }
+
+    public function cascadePathUpdate(): void
+    {
+        $oldPath = $this->getOriginal('path');
+        $newPath = $this->computePath();
+
+        if ($oldPath === $newPath) {
+            return;
+        }
+
+        // Update self
+        $this->path = $newPath;
+        $this->depth = $this->computeDepth();
+        $this->saveQuietly();
+
+        // Update children where path starts with oldPath + ' /'
+        CcLocation::where('path', 'like', $oldPath.' /%')->get()->each(function ($child) use ($oldPath, $newPath) {
+            // Replace just the prefix
+            $child->path = $newPath.substr($child->path, strlen($oldPath));
+            $child->depth = substr_count($child->path, ' / ') + 1;
+            $child->saveQuietly();
+        });
+    }
+
 }
