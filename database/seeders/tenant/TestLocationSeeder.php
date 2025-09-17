@@ -2,9 +2,9 @@
 
 namespace Database\Seeders\tenant;
 
-use App\Models\tenant\CcLocation;
-use App\Models\tenant\CcLookupValue;
-use App\Models\tenant\TenantActivity;
+use App\Models\Tenant\CcLocation;
+use App\Models\Tenant\CcLookupValue;
+use App\Models\Tenant\TenantActivity;
 use Illuminate\Database\Seeder;
 
 class TestLocationSeeder extends Seeder

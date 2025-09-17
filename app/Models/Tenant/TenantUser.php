@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Models\tenant;
+namespace App\Models\Tenant;
 
 use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
@@ -12,7 +13,7 @@ use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 class TenantUser extends Authenticatable implements HasEmailAuthentication, MustVerifyEmail
 {
 
-    use UsesTenantConnection, Notifiable;
+    use UsesTenantConnection, Notifiable, HasFactory;
 
     protected $table = 'users';
 
@@ -68,4 +69,5 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
         $this->has_email_authentication = $condition;
         $this->save();
     }
+
 }

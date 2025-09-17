@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models\tenant;
+namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\LogOptions;
@@ -32,7 +32,7 @@ class CcLocation extends Model
 
     public function type()
     {
-        return $this->belongsTo(\App\Models\tenant\CcLookupValue::class, 'type_id');
+        return $this->belongsTo(\App\Models\Tenant\CcLookupValue::class, 'type_id');
     }
 
     public function computeDepth(): int

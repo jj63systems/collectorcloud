@@ -73,7 +73,7 @@ return [
 
         'tenant_users' => [ // <- points to tenant-specific model
             'driver' => 'eloquent',
-            'model' => App\Models\tenant\TenantUser::class,
+            'model' => App\Models\Tenant\TenantUser::class,
         ],
     ],
 

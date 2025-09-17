@@ -3,7 +3,7 @@
 namespace App\Filament\App\Resources\CcLocations\Pages;
 
 use App\Filament\App\Resources\CcLocations\CcLocationResource;
-use App\Models\tenant\CcLocation;
+use App\Models\Tenant\CcLocation;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;

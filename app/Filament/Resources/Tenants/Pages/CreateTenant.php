@@ -3,7 +3,7 @@
 namespace App\Filament\Resources\Tenants\Pages;
 
 use App\Filament\Resources\Tenants\TenantResource;
-use App\Models\tenant\TenantUser;
+use App\Models\Tenant\TenantUser;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Facades\Hash;
 

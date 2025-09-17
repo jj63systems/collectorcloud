@@ -6,7 +6,7 @@ use App\Filament\App\Resources\CcLookupValues\Pages\CreateCcLookupValue;
 use App\Filament\App\Resources\CcLookupValues\Pages\ListCcLookupValues;
 use App\Filament\App\Resources\CcLookupValues\Schemas\CcLookupValueForm;
 use App\Filament\App\Resources\CcLookupValues\Tables\CcLookupValuesTable;
-use App\Models\tenant\CcLookupValue;
+use App\Models\Tenant\CcLookupValue;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
