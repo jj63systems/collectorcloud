@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Services\DatabaseManager;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Spatie\Multitenancy\Models\Tenant as BaseTenant;
@@ -77,11 +76,14 @@ class Tenant extends BaseTenant
         $this->makeCurrent();
 
         // Run migrations on the tenant DB
-        Artisan::call('migrate', [
-            '--path' => 'database/migrations/tenant',
-            '--database' => 'tenant', // this must match your config/database.php connection
-            '--force' => true,
-        ]);
+
+        app(config('multitenancy.actions.migrate_tenant'))->execute($this);
+
+//        Artisan::call('migrate', [
+//            '--path' => 'database/migrations/tenant',
+//            '--database' => 'tenant', // this must match your config/database.php connection
+//            '--force' => true,
+//        ]);
     }
 
 

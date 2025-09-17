@@ -8,7 +8,6 @@ use Illuminate\Queue\CallQueuedClosure;
 use Spatie\Multitenancy\Actions\ForgetCurrentTenantAction;
 use Spatie\Multitenancy\Actions\MakeQueueTenantAwareAction;
 use Spatie\Multitenancy\Actions\MakeTenantCurrentAction;
-use Spatie\Multitenancy\Actions\MigrateTenantAction;
 
 return [
     /*
@@ -88,7 +87,9 @@ return [
         'make_tenant_current_action' => MakeTenantCurrentAction::class,
         'forget_current_tenant_action' => ForgetCurrentTenantAction::class,
         'make_queue_tenant_aware_action' => MakeQueueTenantAwareAction::class,
-        'migrate_tenant' => MigrateTenantAction::class,
+        'migrate_tenant' => \App\Actions\Tenancy\CustomMigrateTenantAction::class,
+
+
     ],
 
     /*

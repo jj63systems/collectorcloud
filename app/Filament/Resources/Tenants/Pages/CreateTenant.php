@@ -20,6 +20,7 @@ class CreateTenant extends CreateRecord
             'name' => $data['user_name'] ?? null,
             'email' => $data['user_email'] ?? null,
             'password' => isset($data['user_password']) ? Hash::make($data['user_password']) : null,
+            'is_superuser' => true,
         ];
 
         unset($data['user_name'], $data['user_email'], $data['user_password']);
@@ -33,9 +34,4 @@ class CreateTenant extends CreateRecord
         TenantUser::create($this->initialUserData);
     }
 
-    protected function createTenantDatabase(string $dbName): void
-    {
-        // Example: create the DB if it doesn’t exist (PostgreSQL-safe, tweak for MySQL)
-        \DB::connection('central')->statement("CREATE DATABASE IF NOT EXISTS \"$dbName\"");
-    }
 }
