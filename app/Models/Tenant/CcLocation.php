@@ -20,6 +20,13 @@ class CcLocation extends Model
         'depth',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(function (CcLocation $location) {
+            $location->cascadePathUpdate();
+        });
+    }
+
     public function parent()
     {
         return $this->belongsTo(self::class, 'parent_id');
@@ -83,9 +90,6 @@ class CcLocation extends Model
         return !$this->children()->exists();
     }
 
-
-    //
-    // This function is called only from the test data seeder so could potentially be moved into the seeder
     public static function updateAllPathsAndDepths(): void
     {
         static::whereNull('parent_id')->get()->each->updatePathAndDepthRecursively();
@@ -113,5 +117,4 @@ class CcLocation extends Model
             $child->saveQuietly();
         });
     }
-
 }

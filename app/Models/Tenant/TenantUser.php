@@ -7,13 +7,15 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 
 class TenantUser extends Authenticatable implements HasEmailAuthentication, MustVerifyEmail
 {
 
-    use UsesTenantConnection, Notifiable, HasFactory;
+    use UsesTenantConnection, Notifiable, HasFactory, LogsActivity;
 
     protected $table = 'users';
 
@@ -68,6 +70,14 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
 
         $this->has_email_authentication = $condition;
         $this->save();
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'email', 'is_superuser', 'is_external_user', 'has_email_authentication'])
+            ->useLogName('Locations')
+            ->logOnlyDirty();
     }
 
 }
