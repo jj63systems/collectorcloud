@@ -25,6 +25,8 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
         'name',
         'email',
         'password',
+        'is_superuser',
+        'is_external_user',
     ];
 
     /**
