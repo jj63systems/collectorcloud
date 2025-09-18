@@ -36,17 +36,18 @@ return [
     */
 
     'guards' => [
+        // Landlord guard (e.g. for admin panel)
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
         ],
 
-        'tenant' => [ // <- used by Filament App Panel for tenant login
+        // Tenant guard (e.g. for app panel)
+        'tenant' => [
             'driver' => 'session',
             'provider' => 'tenant_users',
         ],
     ],
-
 
     /*
     |--------------------------------------------------------------------------
@@ -66,12 +67,14 @@ return [
     */
 
     'providers' => [
+        // Landlord users (central DB)
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
         ],
 
-        'tenant_users' => [ // <- points to tenant-specific model
+        // Tenant users (per-tenant DB)
+        'tenant_users' => [
             'driver' => 'eloquent',
             'model' => App\Models\Tenant\TenantUser::class,
         ],
@@ -97,8 +100,17 @@ return [
     */
 
     'passwords' => [
+        // Broker for landlord users
         'users' => [
             'provider' => 'users',
+            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // Broker for tenant users
+        'tenant_users' => [
+            'provider' => 'tenant_users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
             'throttle' => 60,

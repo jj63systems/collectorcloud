@@ -33,6 +33,7 @@ class AppPanelProvider extends PanelProvider
             ->id('app')
             ->path('app')
             ->login()
+            ->passwordReset()
             ->authGuard('tenant')
             ->multiFactorAuthentication(
                 [

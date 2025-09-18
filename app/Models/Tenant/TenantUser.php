@@ -2,7 +2,10 @@
 
 namespace App\Models\Tenant;
 
+use App\Notifications\WelcomeSetPassword;
 use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -12,10 +15,13 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 
-class TenantUser extends Authenticatable implements HasEmailAuthentication, MustVerifyEmail
+class TenantUser extends Authenticatable implements HasEmailAuthentication, MustVerifyEmail, CanResetPasswordContract
 {
-
-    use UsesTenantConnection, Notifiable, HasFactory, LogsActivity;
+    use UsesTenantConnection;
+    use Notifiable;
+    use HasFactory;
+    use LogsActivity;
+    use CanResetPassword;
 
     protected $table = 'users';
 
@@ -43,7 +49,7 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
      * @return array<string, string>
      */
@@ -53,21 +59,16 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'has_email_authentication' => 'boolean',
-
         ];
     }
 
     public function hasEmailAuthentication(): bool
     {
-        // This method should return true if the user has enabled email authentication.
-
         return $this->has_email_authentication;
     }
 
     public function toggleEmailAuthentication(bool $condition): void
     {
-        // This method should save whether or not the user has enabled email authentication.
-
         $this->has_email_authentication = $condition;
         $this->save();
     }
@@ -75,9 +76,20 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['name', 'email', 'is_superuser', 'is_external_user', 'has_email_authentication'])
-            ->useLogName('Locations')
+            ->logOnly([
+                'name',
+                'email',
+                'is_superuser',
+                'is_external_user',
+                'has_email_authentication',
+            ])
+            ->useLogName('Users')
             ->logOnlyDirty();
     }
 
+
+    public function sendPasswordSetupNotification(string $token): void
+    {
+        $this->notify(new WelcomeSetPassword($token));
+    }
 }
