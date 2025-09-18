@@ -16,43 +16,41 @@ class CcLocationsTable
             ->columns([
 
                 TextColumn::make('id')
-                    ->label('Location Id')
+                    ->label(mylabel('resources.cc_locations.fields.id'))
                     ->sortable()
                     ->searchable()
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('name')
-                    ->label('Location Name')
+                    ->label(mylabel('resources.cc_locations.fields.name'))
                     ->sortable()
                     ->searchable(),
 
 //                TextColumn::make('parent.name')
-//                    ->label('Parent')
+//                    ->label(label('resources.cc_locations.fields.parent'))
 //                    ->sortable()
 //                    ->toggleable(),
 
-
                 TextColumn::make('path')
-                    ->label('Full Path')
+                    ->label(mylabel('resources.cc_locations.fields.path'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('type.label') // Updated to show related lookup value's label
-                ->label('Type')
+                ->label(mylabel('resources.cc_locations.fields.type'))
                     ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('children_count')
-                    ->label('Child Locations')
+                    ->label(mylabel('resources.cc_locations.fields.children_count'))
                     ->sortable()
                     ->numeric()
                     ->alignEnd()
                     ->toggleable(),
 
-
 //                TextColumn::make('code')
-//                    ->label('Code')
+//                    ->label(label('resources.cc_locations.fields.code'))
 //                    ->sortable()
 //                    ->toggleable(),
             ])
@@ -64,7 +62,7 @@ class CcLocationsTable
 //                    ->before(function (CcLocation $record) {
 //                        if (!$record->canDelete()) {
 //                            Notification::make()
-//                                ->title('This location has child locations and cannot be deleted.')
+//                                ->title(label('resources.cc_locations.notifications.cannot_delete'))
 //                                ->danger()
 //                                ->send();
 //                            throw new Halt();

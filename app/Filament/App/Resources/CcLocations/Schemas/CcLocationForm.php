@@ -15,18 +15,17 @@ class CcLocationForm
     {
         return $schema->components([
 
-            Section::make('Location Details')
-                ->description('Enter the name and type of this location.')
+            Section::make(mylabel('resources.cc_locations.sections.location_details'))
+                ->description(mylabel('resources.cc_locations.sections.location_details_description'))
                 ->schema([
                     Grid::make(2)->schema([
                         TextInput::make('name')
-                            ->label('Location Name')
+                            ->label(mylabel('resources.cc_locations.fields.name'))
                             ->required()
                             ->maxLength(255),
 
-
                         Select::make('type_id')
-                            ->label('Type')
+                            ->label(mylabel('resources.cc_locations.fields.type'))
 //                            ->relationship('type', 'label') // assumes you want to display the label
                             ->options(
                                 \App\Models\Tenant\CcLookupValue::enabled()
@@ -41,12 +40,12 @@ class CcLocationForm
                     ]),
                 ]),
 
-            Section::make('Hierarchy')
-                ->description('Set the parent location to build the hierarchy.')
+            Section::make(mylabel('resources.cc_locations.sections.hierarchy'))
+                ->description(mylabel('resources.cc_locations.sections.hierarchy_description'))
                 ->schema([
                     Grid::make(1)->schema([
                         Select::make('parent_id')
-                            ->label('Parent Location')
+                            ->label(mylabel('resources.cc_locations.fields.parent'))
                             ->options(fn() => CcLocation::all()->pluck('path', 'id'))
                             ->searchable()
                             ->preload()
@@ -54,19 +53,19 @@ class CcLocationForm
                     ]),
                 ]),
 
-            Section::make('System Fields')
-                ->description('These values are automatically calculated.')
+            Section::make(mylabel('resources.cc_locations.sections.system_fields'))
+                ->description(mylabel('resources.cc_locations.sections.system_fields_description'))
                 ->collapsed(false)
                 ->columnSpanFull()
                 ->schema([
                     Grid::make(2)->schema([
                         TextInput::make('path')
-                            ->label('Full Path')
+                            ->label(mylabel('resources.cc_locations.fields.path'))
                             ->disabled()
                             ->readOnly(),
 
                         TextInput::make('depth')
-                            ->label('Depth')
+                            ->label(mylabel('resources.cc_locations.fields.depth'))
                             ->disabled()
                             ->readOnly(),
                     ]),
