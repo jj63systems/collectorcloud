@@ -56,7 +56,7 @@
                             class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-100 border border-gray-200
                                    flex items-center justify-center text-gray-500 hover:text-gray-700"
                             onclick="togglePw('password', this)">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24"
                              stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -84,7 +84,7 @@
                             class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-gray-100 border border-gray-200
                                    flex items-center justify-center text-gray-500 hover:text-gray-700"
                             onclick="togglePw('password_confirmation', this)">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24"
                              stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -97,7 +97,7 @@
 
             {{-- Submit --}}
             <button type="submit"
-                    class="w-full h-11 rounded-lg text-white font-semibold bg-sky-600 hover:bg-sky-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+                    class="w-full h-11 rounded-lg text-white font-semibold bg-black hover:bg-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
                 Set Password
             </button>
         </form>
@@ -105,7 +105,7 @@
 </div>
 
 <script>
-    function togglePw(id, btn) {
+    function togglePw(id) {
         const input = document.getElementById(id);
         input.type = input.type === 'password' ? 'text' : 'password';
     }
