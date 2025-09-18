@@ -14,7 +14,7 @@ class TenantPasswordResetController extends Controller
 {
     public function showResetForm(Request $request, string $token)
     {
-        return view('auth.tenant-reset-password', [
+        return view('auth.tenant-setinitial-password', [
             'token' => $token,
             'email' => $request->query('email'),
         ]);
