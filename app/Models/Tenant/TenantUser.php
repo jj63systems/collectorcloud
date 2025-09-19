@@ -92,4 +92,15 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     {
         $this->notify(new WelcomeSetPassword($token));
     }
+
+    public function teams()
+    {
+        return $this->belongsToMany(
+            \App\Models\Tenant\CcTeam::class,
+            'cc_team_user',
+            'user_id',
+            'team_id'
+        )->withTimestamps()
+            ->withPivot('role');
+    }
 }

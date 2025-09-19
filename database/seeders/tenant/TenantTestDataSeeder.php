@@ -2,10 +2,12 @@
 
 namespace Database\Seeders\tenant;
 
+use App\Models\Tenant\CcTeam;
 use App\Models\Tenant\TenantUser;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
@@ -27,7 +29,7 @@ class TenantTestDataSeeder extends Seeder
         $dbName = DB::connection('tenant')->getDatabaseName();
 
         // Create super user if it doesn't already exist
-        TenantUser::firstOrCreate(
+        $user = TenantUser::firstOrCreate(
             ['email' => $dbName.'@example.com'], // lookup
             [
                 'name' => 'Super User',
@@ -36,6 +38,10 @@ class TenantTestDataSeeder extends Seeder
             ]
         );
 
+// Link user to the first team
+        if ($team = CcTeam::first()) {
+            $user->teams()->syncWithoutDetaching([$team->id => ['role' => 'admin']]);
+        }
 
     }
 }

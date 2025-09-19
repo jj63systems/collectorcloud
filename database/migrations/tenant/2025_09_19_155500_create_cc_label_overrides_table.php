@@ -10,16 +10,18 @@ return new class extends Migration {
         Schema::create('cc_label_overrides', function (Blueprint $table) {
             $table->id();
 
+            $table->foreignId('team_id')->constrained('cc_teams')->cascadeOnDelete();
+            $table->foreignId('resource_id')->constrained('cc_resources')->cascadeOnDelete();
+
             // Locale
             $table->string('locale', 12)->default('en');
-
             // Key and value
             $table->text('key');   // e.g. resources.cc_locations.fields.name
             $table->text('value'); // e.g. "Gallery"
 
             $table->timestamps();
 
-            $table->unique(['locale', 'key'], 'uniq_label_override');
+            $table->unique(['team_id', 'resource_id', 'locale', 'key'], 'uniq_cc_label_override');
         });
     }
 

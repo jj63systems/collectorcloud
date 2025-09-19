@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\tenant;
 
+use App\Models\Tenant\CcTeam;
 use Illuminate\Database\Seeder;
 
 
@@ -15,6 +16,11 @@ class TenantDatabaseSeeder extends Seeder
     public function run(): void
     {
 
+
+        // Create default team
+        $team = CcTeam::create([
+            'name' => 'Default Team',
+        ]);
 
         activity()->disableLogging();
 
