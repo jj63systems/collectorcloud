@@ -24,7 +24,6 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Spatie\Multitenancy\Http\Middleware\EnsureValidTenantSession;
 use Spatie\Multitenancy\Http\Middleware\NeedsTenant;
 
-
 class AppPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -57,13 +56,13 @@ class AppPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
-                NeedsTenant::class, //spatie
+                NeedsTenant::class, // spatie
 
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
 
-                EnsureValidTenantSession::class, //spatie
+                EnsureValidTenantSession::class, // spatie
 
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
@@ -76,7 +75,7 @@ class AppPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->viteTheme('resources/css/filament/app/theme.css'); // update with your theme path
-
+            ->viteTheme('resources/css/filament/app/theme.css');
     }
+
 }

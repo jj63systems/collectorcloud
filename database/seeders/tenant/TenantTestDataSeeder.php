@@ -38,7 +38,7 @@ class TenantTestDataSeeder extends Seeder
             ]
         );
 
-// Link user to the first team
+        // Link user to the first team
         if ($team = CcTeam::first()) {
             $user->teams()->syncWithoutDetaching([$team->id => ['role' => 'admin']]);
         }

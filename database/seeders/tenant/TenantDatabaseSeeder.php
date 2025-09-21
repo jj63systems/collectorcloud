@@ -27,5 +27,10 @@ class TenantDatabaseSeeder extends Seeder
         // Call the lookup seeder
         $this->call(CcLookupSeeder::class);
 
+        $this->call(CcResourceSeeder::class);
+
+        $this->call(TenantSettingsSeeder::class);
+
+
     }
 }

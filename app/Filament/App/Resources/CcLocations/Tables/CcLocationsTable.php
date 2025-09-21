@@ -16,41 +16,41 @@ class CcLocationsTable
             ->columns([
 
                 TextColumn::make('id')
-                    ->label(mylabel('resources.cc_locations.fields.id'))
+                    ->label(mylabel('cc_locations', 'fields.id', 'Location ID'))
                     ->sortable()
                     ->searchable()
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('name')
-                    ->label(mylabel('resources.cc_locations.fields.name'))
+                    ->label(mylabel('cc_locations', 'fields.name', 'Location Name'))
                     ->sortable()
                     ->searchable(),
 
 //                TextColumn::make('parent.name')
-//                    ->label(label('resources.cc_locations.fields.parent'))
+//                    ->label(mylabel('cc_locations', 'fields.parent', 'Parent Location'))
 //                    ->sortable()
 //                    ->toggleable(),
 
                 TextColumn::make('path')
-                    ->label(mylabel('resources.cc_locations.fields.path'))
+                    ->label(mylabel('cc_locations', 'fields.path', 'Full Path'))
                     ->searchable()
                     ->sortable(),
 
                 TextColumn::make('type.label') // Updated to show related lookup value's label
-                ->label(mylabel('resources.cc_locations.fields.type'))
+                ->label(mylabel('cc_locations', 'fields.type', 'Type'))
                     ->sortable()
                     ->toggleable(),
 
                 TextColumn::make('children_count')
-                    ->label(mylabel('resources.cc_locations.fields.children_count'))
+                    ->label(mylabel('cc_locations', 'fields.children_count', 'Child Locations'))
                     ->sortable()
                     ->numeric()
                     ->alignEnd()
                     ->toggleable(),
 
 //                TextColumn::make('code')
-//                    ->label(label('resources.cc_locations.fields.code'))
+//                    ->label(mylabel('cc_locations', 'fields.code', 'Code'))
 //                    ->sortable()
 //                    ->toggleable(),
             ])
@@ -62,7 +62,7 @@ class CcLocationsTable
 //                    ->before(function (CcLocation $record) {
 //                        if (!$record->canDelete()) {
 //                            Notification::make()
-//                                ->title(label('resources.cc_locations.notifications.cannot_delete'))
+//                                ->title(mylabel('cc_locations', 'notifications.cannot_delete', 'This location has child locations and cannot be deleted.'))
 //                                ->danger()
 //                                ->send();
 //                            throw new Halt();

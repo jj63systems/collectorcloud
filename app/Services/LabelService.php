@@ -3,59 +3,86 @@
 namespace App\Services;
 
 use App\Models\Tenant\CcLabelOverride;
+use App\Models\Tenant\CcResource;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class LabelService
 {
     /**
-     * In-request cache of labels, keyed by resource prefix
-     * e.g. "resources.cc_locations"
+     * In-request cache of labels, keyed by team + resource + locale.
      */
     protected array $cache = [];
 
     /**
      * Resolve a label key into its text.
      */
-    public function get(string $key, ?string $default = null): string
+    public function get(string $resourceCode, string $key, string $hardDefault): string
     {
         $locale = app()->getLocale();
 
-        // Extract prefix: e.g. "resources.cc_locations"
-        $parts = explode('.', $key);
-        if (count($parts) < 2) {
-            return $default ?? $key; // malformed key
+        // Find resource
+        $resource = CcResource::where('code', $resourceCode)->first();
+        if (!$resource) {
+            return $hardDefault; // unknown resource
         }
-        $prefix = $parts[0].'.'.$parts[1];
+        $resourceId = $resource->id;
 
-        // If not already cached, bulk load for this resource
-        if (!isset($this->cache[$prefix])) {
-            $this->cache[$prefix] = $this->loadResourceLabels($prefix, $locale);
+        // Get current user + team
+        $user = Auth::user();
+        $teamId = $user?->teams()->first()?->id;
+
+        // Cache key
+        $cacheKey = "resource:{$resourceId}:locale:{$locale}:team:{$teamId}";
+
+        // Load if not already cached
+        if (!isset($this->cache[$cacheKey])) {
+            $this->cache[$cacheKey] = $this->loadLabels($resourceId, $teamId, $locale, $resourceCode);
         }
 
-        // Return the requested key if available, else fallback
-        return $this->cache[$prefix][$key] ?? $default ?? $key;
+        // Return resolved label or fallback
+        return $this->cache[$cacheKey][$key] ?? $hardDefault;
     }
 
     /**
-     * Bulk load all labels for a given resource prefix.
+     * Bulk load labels for a resource, considering team + tenant + lang file.
      *
      * @return array<string,string>
      */
-    protected function loadResourceLabels(string $prefix, string $locale): array
+    protected function loadLabels(int $resourceId, ?int $teamId, string $locale, string $resourceCode): array
     {
-        // Start with defaults from lang file
-        $defaults = collect(trans($prefix, [], $locale));
-        $labels = $defaults->dot()->mapWithKeys(function ($value, $key) use ($prefix) {
-            return [$prefix.'.'.$key => $value];
-        })->toArray();
+        // 1. Language file defaults (lowest precedence)
+        $defaults = collect(trans("resources.$resourceCode", [], $locale));
+        $langLabels = $defaults->dot()->mapWithKeys(fn($value, $key) => [$key => $value])->toArray();
+        $labels = $langLabels;
 
-        // Load overrides from DB in one query
-        $overrides = CcLabelOverride::query()
+        // 2. Tenant-wide overrides (higher precedence)
+        $tenantOverrides = CcLabelOverride::query()
+            ->whereNull('team_id')
+            ->where('resource_id', $resourceId)
             ->where('locale', $locale)
-            ->where('key', 'like', $prefix.'%')
             ->pluck('value', 'key')
             ->toArray();
+        $labels = array_merge($labels, $tenantOverrides);
 
-        // Merge: overrides take precedence over defaults
-        return array_merge($labels, $overrides);
+        // 3. Team-level overrides (highest precedence)
+        $teamOverrides = [];
+        if ($teamId) {
+            $teamOverrides = CcLabelOverride::query()
+                ->where('team_id', $teamId)
+                ->where('resource_id', $resourceId)
+                ->where('locale', $locale)
+                ->pluck('value', 'key')
+                ->toArray();
+            $labels = array_merge($labels, $teamOverrides);
+        }
+
+        // Debug logging
+        Log::info("LabelService [$resourceCode] lang defaults:", $langLabels);
+        Log::info("LabelService [$resourceCode] tenant overrides:", $tenantOverrides);
+        Log::info("LabelService [$resourceCode] team overrides:", $teamOverrides);
+        Log::info("LabelService [$resourceCode] final merged:", $labels);
+
+        return $labels;
     }
 }

@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('cc_label_overrides', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('team_id')->constrained('cc_teams')->cascadeOnDelete();
+            $table->foreignId('team_id')->nullable()->constrained('cc_teams');
             $table->foreignId('resource_id')->constrained('cc_resources')->cascadeOnDelete();
 
             // Locale

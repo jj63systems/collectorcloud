@@ -3,9 +3,9 @@
 return [
     'cc_locations' => [
         'fields' => [
-            'id' => 'Location Id',
+            'id' => 'Location ID',
             'name' => 'Location Name',
-            'path' => 'Full location',
+            'path' => 'Full Path',
             'type' => 'Type',
             'code' => 'Code',
             'depth' => 'Depth',

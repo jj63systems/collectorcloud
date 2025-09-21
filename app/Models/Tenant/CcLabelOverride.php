@@ -14,6 +14,8 @@ class CcLabelOverride extends Model
     protected $fillable = [
         'tenant_id',
         'user_id',
+        'tenant_id',
+        'resource_id',
         'locale',
         'key',
         'value',
