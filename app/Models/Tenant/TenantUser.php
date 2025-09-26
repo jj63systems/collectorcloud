@@ -2,7 +2,9 @@
 
 namespace App\Models\Tenant;
 
+use App\Models\Traits\HasTeamRoles;
 use App\Notifications\WelcomeSetPassword;
+use App\Services\AccessService;
 use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Illuminate\Auth\Passwords\CanResetPassword;
 use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
@@ -22,6 +24,7 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     use HasFactory;
     use LogsActivity;
     use CanResetPassword;
+    use HasTeamRoles;
 
     protected $table = 'users';
 
@@ -36,6 +39,7 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
         'password',
         'is_superuser',
         'is_external_user',
+        'current_team_id',
     ];
 
     /**
@@ -93,6 +97,7 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
         $this->notify(new WelcomeSetPassword($token));
     }
 
+
     public function teams()
     {
         return $this->belongsToMany(
@@ -100,7 +105,18 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
             'cc_team_user',
             'user_id',
             'team_id'
-        )->withTimestamps()
-            ->withPivot('role');
+        )->withTimestamps();
     }
+
+    public function currentTeam()
+    {
+        return $this->belongsTo(CcTeam::class, 'current_team_id');
+    }
+
+    public function canAccess(string $permission, CcTeam $team): bool
+    {
+        return AccessService::canAccess($this, $team, $permission);
+    }
+
+
 }

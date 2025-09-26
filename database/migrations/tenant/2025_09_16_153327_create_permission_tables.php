@@ -10,6 +10,11 @@ return new class extends Migration {
      */
     public function up(): void
     {
+
+        // Flush only Spatie permission cache - keeping this here as there have been issues with tables not being created when migrating multiple tenants at once
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        Log::info('debug...');
         $teams = config('permission.teams');
         $tableNames = config('permission.table_names');
         $columnNames = config('permission.column_names');
@@ -21,6 +26,7 @@ return new class extends Migration {
         throw_if($teams && empty($columnNames['team_foreign_key'] ?? null),
             new Exception('Error: team_foreign_key on config/permission.php not loaded. Run [php artisan config:clear] and try again.'));
 
+        Log::info('Creating permission tables...');
         Schema::create($tableNames['permissions'], static function (Blueprint $table) {
             // $table->engine('InnoDB');
             $table->bigIncrements('id'); // permission id
@@ -31,6 +37,7 @@ return new class extends Migration {
             $table->unique(['name', 'guard_name']);
         });
 
+        Log::info('Creating roles tables...');
         Schema::create($tableNames['roles'], static function (Blueprint $table) use ($teams, $columnNames) {
             // $table->engine('InnoDB');
             $table->bigIncrements('id'); // role id

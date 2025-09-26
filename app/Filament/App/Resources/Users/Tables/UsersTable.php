@@ -16,18 +16,33 @@ class UsersTable
                     ->sortable()
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('name')
                     ->searchable(),
+
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),
+
+                TextColumn::make('teams')
+                    ->label('Teams')
+                    ->getStateUsing(fn($record) => $record->teams()
+                        ->distinct()
+                        ->pluck('cc_teams.name')
+                        ->join(', ')
+                    )
+                    ->sortable()
+                    ->toggleable(),
+
                 TextColumn::make('email_verified_at')
                     ->dateTime()
                     ->sortable(),
+
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
                 TextColumn::make('updated_at')
                     ->dateTime()
                     ->sortable()
@@ -38,12 +53,10 @@ class UsersTable
             ])
             ->recordActions([
                 ViewAction::make(),
-//                EditAction::make(),
+                // EditAction::make(),
             ])
             ->toolbarActions([
-//                BulkActionGroup::make([
-//                    DeleteBulkAction::make(),
-//                ]),
+                // Bulk actions if needed
             ]);
     }
 }

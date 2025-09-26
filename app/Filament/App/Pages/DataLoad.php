@@ -11,24 +11,49 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
-use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Component as LivewireComponent;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use Filament\Schemas\Components\Section;
 
 class DataLoad extends Page implements HasForms
 {
     use InteractsWithForms;
 
+    // -- TITLES AND NAV SETTINGS -----------------------------
+
+    // Global search settings
+//    protected static ?string $recordTitleAttribute = 'name';
+    protected static bool $isGloballySearchable = false;
+    // END global search settings
+
+
+    // ✅ Appears in sidebar navigation
+    protected static ?string $navigationLabel = 'Data load';
+
+    // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
+//    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    // ✅ Optional grouping in sidebar
+    protected static string|null|\UnitEnum $navigationGroup = 'Configure';
+
+    // ✅ Title shown on the List Records page
+    protected static ?string $label = 'Text';         // Singular
+    protected static ?string $pluralLabel = 'Texts';  // Plural
+
+    // ✅ Optional custom navigation sort
+    protected static ?int $navigationSort = 30;
+
+    // END TITLES AND NAV SETTINGS ----------------------------
 
     // --- variables ------------------------------
-    protected static ?string $navigationLabel = 'Data Load';
     protected string $view = 'filament.app.pages.data-load';
+
 
     public $data = [];
     public $formData = [];

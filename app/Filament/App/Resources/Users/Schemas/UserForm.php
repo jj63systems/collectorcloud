@@ -3,6 +3,7 @@
 namespace App\Filament\App\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\MultiSelect;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Grid;
@@ -49,6 +50,18 @@ class UserForm
                             ->label('Has Email Authentication')
                             ->default(false),
                     ]),
+                ]),
+
+            Section::make('Teams & Membership')
+                ->description('Assign this user to one or more teams.')
+                ->schema([
+                    MultiSelect::make('teams')
+                        ->label('Teams')
+                        ->relationship('teams', 'name') // uses the belongsToMany
+                        ->required()
+                        ->preload()
+                        ->searchable()
+                        ->helperText('Select one or more teams this user should belong to.'),
                 ]),
 
             Section::make('System Fields')

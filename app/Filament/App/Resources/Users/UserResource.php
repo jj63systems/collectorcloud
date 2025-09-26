@@ -10,23 +10,46 @@ use App\Filament\App\Resources\Users\Schemas\UserForm;
 use App\Filament\App\Resources\Users\Schemas\UserInfolist;
 use App\Filament\App\Resources\Users\Tables\UsersTable;
 use App\Models\Tenant\TenantUser as User;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    // -- TITLES AND NAV SETTINGS -----------------------------
+
+    // Global search settings
+//    protected static ?string $recordTitleAttribute = 'name';
+    protected static bool $isGloballySearchable = false;
+    // END global search settings
+
+    // ✅ Appears in sidebar navigation
+    protected static ?string $navigationLabel = 'Security > User management';
+
+    // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
+//    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+
+    // ✅ Optional grouping in sidebar
+    protected static string|null|\UnitEnum $navigationGroup = 'Configure';
+
+    // ✅ Title shown on the List Records page
+    protected static ?string $label = 'User';         // Singular
+    protected static ?string $pluralLabel = 'Users';  // Plural
+
+    // ✅ Optional custom navigation sort
+    protected static ?int $navigationSort = 90;
+
+    // END TITLES AND NAV SETTINGS ----------------------------
+
 
     public static function form(Schema $schema): Schema
     {
         return UserForm::configure($schema);
     }
-    
+
     public static function table(Table $table): Table
     {
         return UsersTable::configure($table);

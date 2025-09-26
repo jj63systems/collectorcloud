@@ -19,11 +19,10 @@ class CcTeam extends Model
     public function users()
     {
         return $this->belongsToMany(
-            \App\Models\User::class,
+            \App\Models\Tenant\TenantUser::class,
             'cc_team_user',
             'team_id',
             'user_id'
-        )->withTimestamps()
-            ->withPivot('role');
+        )->withTimestamps();
     }
 }

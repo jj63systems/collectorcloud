@@ -7,10 +7,8 @@ use App\Filament\App\Resources\CcLookupValues\Pages\ListCcLookupValues;
 use App\Filament\App\Resources\CcLookupValues\Schemas\CcLookupValueForm;
 use App\Filament\App\Resources\CcLookupValues\Tables\CcLookupValuesTable;
 use App\Models\Tenant\CcLookupValue;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class CcLookupValueResource extends Resource
@@ -25,13 +23,13 @@ class CcLookupValueResource extends Resource
     // END global search settings
 
     // ✅ Appears in sidebar navigation
-    protected static ?string $navigationLabel = 'Lookup Values';
+    protected static ?string $navigationLabel = 'Reference > Lookup Values';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+//    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     // ✅ Optional grouping in sidebar
-    protected static string|null|\UnitEnum $navigationGroup = 'Reference Data';
+    protected static string|null|\UnitEnum $navigationGroup = 'Configure';
 
     // ✅ Title shown on the List Records page
     protected static ?string $label = 'Lookup Value';         // Singular

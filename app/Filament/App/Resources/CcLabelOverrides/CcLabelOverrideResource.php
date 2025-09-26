@@ -8,10 +8,8 @@ use App\Filament\App\Resources\CcLabelOverrides\Pages\ListCcLabelOverrides;
 use App\Filament\App\Resources\CcLabelOverrides\Schemas\CcLabelOverrideForm;
 use App\Filament\App\Resources\CcLabelOverrides\Tables\CcLabelOverridesTable;
 use App\Models\Tenant\CcLabelOverride;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class CcLabelOverrideResource extends Resource
@@ -27,10 +25,10 @@ class CcLabelOverrideResource extends Resource
 
 
     // ✅ Appears in sidebar navigation
-    protected static ?string $navigationLabel = 'Screen texts';
+    protected static ?string $navigationLabel = 'System > Screen texts';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+//    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     // ✅ Optional grouping in sidebar
     protected static string|null|\UnitEnum $navigationGroup = 'Configure';
@@ -40,7 +38,7 @@ class CcLabelOverrideResource extends Resource
     protected static ?string $pluralLabel = 'Texts';  // Plural
 
     // ✅ Optional custom navigation sort
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 100;
 
     // END TITLES AND NAV SETTINGS ----------------------------
 

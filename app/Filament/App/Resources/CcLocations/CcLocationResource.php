@@ -9,10 +9,8 @@ use App\Filament\App\Resources\CcLocations\Pages\ViewCcLocation;
 use App\Filament\App\Resources\CcLocations\Schemas\CcLocationForm;
 use App\Filament\App\Resources\CcLocations\Tables\CcLocationsTable;
 use App\Models\Tenant\CcLocation;
-use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
-use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 
 class CcLocationResource extends Resource
@@ -29,13 +27,13 @@ class CcLocationResource extends Resource
 
 
     // ✅ Appears in sidebar navigation
-    protected static ?string $navigationLabel = 'Locations';
+    protected static ?string $navigationLabel = 'Reference > Locations';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+//    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     // ✅ Optional grouping in sidebar
-    protected static string|null|\UnitEnum $navigationGroup = 'Reference Data';
+    protected static string|null|\UnitEnum $navigationGroup = 'Configure';
 
     // ✅ Title shown on the List Records page
     protected static ?string $label = 'Location';         // Singular
