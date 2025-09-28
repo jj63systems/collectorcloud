@@ -3,7 +3,6 @@
 namespace App\Models\Traits;
 
 use App\Models\Tenant\CcTeam;
-use App\Models\Tenant\Role;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Traits\HasRoles;
 
@@ -23,66 +22,19 @@ trait HasTeamRoles
     protected array $permissionCache = [];
 
     /**
-     * Roles relationship, always scoped to the current team by default.
+     * Roles relationship (global, not team-scoped).
      */
     public function roles(): BelongsToMany
     {
-        return $this->baseRoles()->wherePivot('team_id', $this->current_team_id);
+        return $this->baseRoles();
     }
 
     /**
-     * Assign one or more roles to the user for a given team.
+     * Assign one or more roles globally to the user.
      */
-    public function assignRole($roles, CcTeam $team = null): self
+    public function assignRole($roles): self
     {
-        $team = $team ?: $this->currentTeam;
-
-        $roleIds = collect($roles)->map(function ($role) use ($team) {
-            if ($role instanceof Role) {
-                return $role->id;
-            }
-
-            return Role::where('name', $role)
-                ->where('team_id', $team->id)
-                ->firstOrFail()
-                ->id;
-        })->toArray();
-
-        foreach ($roleIds as $roleId) {
-            $this->baseRoles()->syncWithoutDetaching([
-                $roleId => ['team_id' => $team->id],
-            ]);
-        }
-
-        // Clear cache so new roles are visible immediately
-        $this->roleCache = [];
-        $this->permissionCache = [];
-
-        return $this;
-    }
-
-    /**
-     * Remove one or more roles from the user for a given team.
-     */
-    public function removeRole($roles, CcTeam $team = null): self
-    {
-        $team = $team ?: $this->currentTeam;
-
-        $roleIds = collect($roles)->map(function ($role) use ($team) {
-            if ($role instanceof Role) {
-                return $role->id;
-            }
-
-            return Role::where('name', $role)
-                ->where('team_id', $team->id)
-                ->firstOrFail()
-                ->id;
-        })->toArray();
-
-        $this->baseRoles()
-            ->newPivotStatementForId($roleIds, $this)
-            ->where('team_id', $team->id)
-            ->delete();
+        $this->baseAssignRole($roles);
 
         $this->roleCache = [];
         $this->permissionCache = [];
@@ -91,28 +43,11 @@ trait HasTeamRoles
     }
 
     /**
-     * Replace all roles for the user in a given team.
+     * Replace all roles globally for the user.
      */
-    public function syncRoles($roles, CcTeam $team = null): self
+    public function syncRoles($roles): self
     {
-        $team = $team ?: $this->currentTeam;
-
-        $roleIds = collect($roles)->map(function ($role) use ($team) {
-            if ($role instanceof Role) {
-                return $role->id;
-            }
-
-            return Role::where('name', $role)
-                ->where('team_id', $team->id)
-                ->firstOrFail()
-                ->id;
-        })->toArray();
-
-        $this->baseRoles()->wherePivot('team_id', $team->id)->detach();
-
-        foreach ($roleIds as $roleId) {
-            $this->baseRoles()->attach($roleId, ['team_id' => $team->id]);
-        }
+        $this->baseSyncRoles($roles);
 
         $this->roleCache = [];
         $this->permissionCache = [];
@@ -121,64 +56,79 @@ trait HasTeamRoles
     }
 
     /**
-     * Get the names of all roles the user has for the given team.
+     * Get the names of all roles the user has *effective* in the given team.
      */
     public function getRoleNames(CcTeam $team = null)
     {
         $team = $team ?: $this->currentTeam;
-        $cacheKey = $team->id;
+        $cacheKey = 'roles:'.$team->id;
 
         if (isset($this->roleCache[$cacheKey])) {
             return $this->roleCache[$cacheKey];
         }
 
-        return $this->roleCache[$cacheKey] = $this->baseRoles()
-            ->where('model_has_roles.team_id', $team->id)
+        $roleNames = $this->baseRoles()
+            ->whereIn('roles.id', function ($q) use ($team) {
+                $q->select('role_id')
+                    ->from('team_allowed_roles')
+                    ->where('team_id', $team->id);
+            })
             ->pluck('roles.name');
+
+        return $this->roleCache[$cacheKey] = $roleNames;
     }
 
     /**
-     * Check if the user has the given role(s) in the given team.
+     * Check if the user has the given role(s) *effective* in the given team.
      */
     public function hasRole($roles, CcTeam $team = null): bool
     {
         $team = $team ?: $this->currentTeam;
         $roles = (array) $roles;
-        $cacheKey = $team->id.'|'.implode(',', $roles);
+        $cacheKey = 'hasRole:'.$team->id.':'.implode(',', $roles);
 
         if (isset($this->roleCache[$cacheKey])) {
             return $this->roleCache[$cacheKey];
         }
 
-        return $this->roleCache[$cacheKey] = $this->baseRoles()
-            ->where('model_has_roles.team_id', $team->id)
+        $result = $this->baseRoles()
             ->whereIn('roles.name', $roles)
+            ->whereIn('roles.id', function ($q) use ($team) {
+                $q->select('role_id')
+                    ->from('team_allowed_roles')
+                    ->where('team_id', $team->id);
+            })
             ->exists();
+
+        return $this->roleCache[$cacheKey] = $result;
     }
 
     /**
-     * Check if the user has the given permission in the given team.
+     * Check if the user has the given permission *effective* in the given team.
      */
     public function hasPermissionTo($permission, $team = null, $guardName = null): bool
     {
         $team = $team ?: $this->currentTeam;
-        $cacheKey = $team->id.'|'.$permission.'|'.($guardName ?? 'web');
+        $cacheKey = 'perm:'.$team->id.':'.$permission.':'.($guardName ?? 'web');
 
         if (isset($this->permissionCache[$cacheKey])) {
             return $this->permissionCache[$cacheKey];
         }
 
-        $result = $this->roles()
-            ->where('model_has_roles.team_id', $team->id)
+        $query = $this->baseRoles()
+            ->whereIn('roles.id', function ($q) use ($team) {
+                $q->select('role_id')
+                    ->from('team_allowed_roles')
+                    ->where('team_id', $team->id);
+            })
             ->whereHas('permissions', function ($q) use ($permission, $guardName) {
                 $q->where('name', $permission);
 
                 if ($guardName) {
                     $q->where('guard_name', $guardName);
                 }
-            })
-            ->exists();
+            });
 
-        return $this->permissionCache[$cacheKey] = $result;
+        return $this->permissionCache[$cacheKey] = $query->exists();
     }
 }

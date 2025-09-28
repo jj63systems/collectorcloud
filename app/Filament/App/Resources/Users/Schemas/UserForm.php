@@ -64,6 +64,20 @@ class UserForm
                         ->helperText('Select one or more teams this user should belong to.'),
                 ]),
 
+
+            Section::make('Roles Assigned')
+                ->description('Assign this user to one or more Roles.')
+                ->schema([
+                    MultiSelect::make('roles')
+                        ->label('Roles')
+                        ->relationship('roles', 'name') // uses the belongsToMany
+                        ->required()
+                        ->preload()
+                        ->searchable()
+                        ->helperText('Select one or more roles this user should belong to.'),
+                ]),
+
+
             Section::make('System Fields')
                 ->description('These values are automatically updated.')
                 ->collapsed(false)

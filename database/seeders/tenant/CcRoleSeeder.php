@@ -48,7 +48,6 @@ class CcRoleSeeder extends Seeder
             $role = Role::firstOrCreate([
                 'name' => $roleName,
                 'guard_name' => 'tenant',
-                'team_id' => $team->id,
             ]);
 
             $role->syncPermissions($perms);
