@@ -23,6 +23,7 @@ return new class extends Migration {
                 ->onDelete('cascade');
 
             $table->primary(['team_id', 'role_id']);
+            $table->timestamps();
         });
     }
 

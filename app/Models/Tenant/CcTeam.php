@@ -3,6 +3,7 @@
 namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
 class CcTeam extends Model
@@ -11,18 +12,23 @@ class CcTeam extends Model
 
     protected $fillable = ['name'];
 
-    public function overrides()
+    /**
+     * Users belonging to this team.
+     */
+    public function users(): BelongsToMany
     {
-        return $this->hasMany(CcLabelOverride::class, 'team_id');
+        return $this->belongsToMany(TenantUser::class, 'cc_team_user', 'team_id', 'user_id')
+            ->withTimestamps();
     }
 
-    public function users()
+    /**
+     * Roles allowed for this team (via pivot table team_allowed_roles).
+     */
+    public function roles(): BelongsToMany
     {
-        return $this->belongsToMany(
-            \App\Models\Tenant\TenantUser::class,
-            'cc_team_user',
-            'team_id',
-            'user_id'
-        )->withTimestamps();
+        return $this->belongsToMany(Role::class, 'team_allowed_roles', 'team_id', 'role_id')
+            ->withTimestamps();
     }
+
+
 }

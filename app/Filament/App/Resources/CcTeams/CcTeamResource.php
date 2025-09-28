@@ -59,6 +59,8 @@ class CcTeamResource extends Resource
     {
         return [
             UsersRelationManager::class,
+            \App\Filament\App\Resources\CcTeams\RelationManagers\RolesRelationManager::class,
+
         ];
     }
 

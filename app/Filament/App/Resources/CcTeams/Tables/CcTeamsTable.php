@@ -17,18 +17,26 @@ class CcTeamsTable
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('name')->searchable(),
+                TextColumn::make('name')
+                    ->label('Team Name')
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('users_count')
-                    ->counts('users')
+                    ->counts('users') // counts() auto eager loads relationship count
                     ->alignCenter()
-                    ->label('Members')
+                    ->label('Team Users')
+                    ->sortable(),
+
+                TextColumn::make('roles_count')
+                    ->counts('roles') // counts() for roles as well
+                    ->alignCenter()
+                    ->label('Team Roles')
                     ->sortable(),
             ])
             ->filters([])
             ->recordActions([
                 EditAction::make(),
-                // EditAction::make(),
             ]);
     }
 }
