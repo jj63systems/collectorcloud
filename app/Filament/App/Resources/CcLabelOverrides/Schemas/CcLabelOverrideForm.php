@@ -89,20 +89,20 @@ class CcLabelOverrideForm
                         ->searchable()
                         ->preload()
                         ->rules([
-                            fn(callable $get, callable $context) => Rule::unique('cc_label_overrides')
-                                ->ignore($context('record')?->id)
+                            fn(callable $get, $record) => Rule::unique(\App\Models\Tenant\CcLabelOverride::class, 'key')
+                                ->ignore($record?->id)
                                 ->where(function ($query) use ($get) {
                                     return $query
                                         ->where('resource_id', $get('resource_id'))
                                         ->where('locale', $get('locale'))
-                                        ->when($get('team_id'), function ($q) use ($get) {
-                                            $q->where('team_id', $get('team_id'));
-                                        }, function ($q) {
-                                            $q->whereNull('team_id');
-                                        });
+                                        ->when(
+                                            $get('team_id'),
+                                            fn($q) => $q->where('team_id', $get('team_id')),
+                                            fn($q) => $q->whereNull('team_id')
+                                        );
                                 }),
-                        ]),
-
+                        ])
+                    ,
                     TextInput::make('value')
                         ->label('Value')
                         ->placeholder('e.g. Custom Path Label')
