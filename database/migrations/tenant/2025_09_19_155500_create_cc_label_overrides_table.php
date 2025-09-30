@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
@@ -21,12 +22,29 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->unique(['team_id', 'resource_id', 'locale', 'key'], 'uniq_cc_label_override');
+            // note: unique constraints are added via DB::statement() below
         });
+
+        // One global override max (team_id IS NULL)
+        DB::statement("
+            CREATE UNIQUE INDEX uniq_cc_label_override_global
+            ON cc_label_overrides (resource_id, locale, key)
+            WHERE team_id IS NULL
+        ");
+
+        // One per-team override max (team_id IS NOT NULL)
+        DB::statement("
+            CREATE UNIQUE INDEX uniq_cc_label_override_team
+            ON cc_label_overrides (team_id, resource_id, locale, key)
+            WHERE team_id IS NOT NULL
+        ");
     }
 
     public function down(): void
     {
+        DB::statement("DROP INDEX IF EXISTS uniq_cc_label_override_global");
+        DB::statement("DROP INDEX IF EXISTS uniq_cc_label_override_team");
+
         Schema::dropIfExists('cc_label_overrides');
     }
 };

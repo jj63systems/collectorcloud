@@ -18,11 +18,14 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('name')
+                    ->sortable()
                     ->searchable(),
 
                 TextColumn::make('email')
                     ->label('Email address')
-                    ->searchable(),
+                    ->searchable()
+                    ->sortable()
+                ,
 
                 TextColumn::make('teams')
                     ->label('Teams')

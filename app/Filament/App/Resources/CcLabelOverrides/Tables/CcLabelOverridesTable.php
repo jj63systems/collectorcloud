@@ -19,29 +19,32 @@ class CcLabelOverridesTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-//                Tables\Columns\SelectColumn::make('resource_id')
-//                    ->label('Resource')
-//                    ->options(fn() => CcResource::pluck('name', 'id')->toArray())
-//                    ->sortable()
-//                    ->searchable(),
-//
-//                Tables\Columns\SelectColumn::make('team_id')
-//                    ->label('Team')
-//                    ->options(fn() => CcTeam::pluck('name', 'id')->toArray())
-//                    ->placeholder('No team (applies globally)')
-//                    ->sortable()
-//                    ->searchable(),
-//
-//                Tables\Columns\SelectColumn::make('locale')
-//                    ->label('Locale')
-//                    ->options([
-//                        'en' => 'English',
-//                        'fr' => 'French',
-//                        'de' => 'German',
-//                    ])
-//                    ->placeholder('Select locale')
-//                    ->sortable()
-//                    ->searchable(),
+                Tables\Columns\SelectColumn::make('resource_id')
+                    ->label('Resource')
+                    ->options(fn() => CcResource::pluck('name', 'id')->toArray())
+                    ->sortable()
+                    ->disabled()
+                    ->searchable(),
+
+                Tables\Columns\SelectColumn::make('team_id')
+                    ->label('Team')
+                    ->options(fn() => CcTeam::pluck('name', 'id')->toArray())
+                    ->placeholder('No team (applies globally)')
+                    ->sortable()
+                    ->disabled()
+                    ->searchable(),
+
+                Tables\Columns\SelectColumn::make('locale')
+                    ->label('Locale')
+                    ->disabled()
+                    ->options([
+                        'en' => 'English',
+                        'fr' => 'French',
+                        'de' => 'German',
+                    ])
+                    ->placeholder('Select locale')
+                    ->sortable()
+                    ->searchable(),
 
                 Tables\Columns\TextColumn::make('key')
                     ->label('Key')

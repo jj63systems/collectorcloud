@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources\CcLabelOverrides\Schemas;
 
+use App\Models\Tenant\CcLabelOverride;
 use App\Models\Tenant\CcResource;
 use App\Models\Tenant\CcTeam;
 use Filament\Forms\Components\Radio;
@@ -89,20 +90,30 @@ class CcLabelOverrideForm
                         ->searchable()
                         ->preload()
                         ->rules([
-                            fn(callable $get, $record) => Rule::unique(\App\Models\Tenant\CcLabelOverride::class, 'key')
+                            fn(callable $get, $record) => Rule::unique(CcLabelOverride::class, 'key')
                                 ->ignore($record?->id)
                                 ->where(function ($query) use ($get) {
-                                    return $query
+                                    $query
                                         ->where('resource_id', $get('resource_id'))
-                                        ->where('locale', $get('locale'))
-                                        ->when(
-                                            $get('team_id'),
-                                            fn($q) => $q->where('team_id', $get('team_id')),
-                                            fn($q) => $q->whereNull('team_id')
-                                        );
+                                        ->where('locale', $get('locale'));
+
+                                    if ($get('team_id')) {
+                                        // Team-specific → disallow if this team already has one OR if a global exists
+                                        $query->where(function ($q) use ($get) {
+                                            $q->where('team_id', $get('team_id'))
+                                                ->orWhereNull('team_id');
+                                        });
+                                    } else {
+                                        // Global → disallow if ANY row exists
+                                        // i.e. any team-specific OR global
+                                        // No team_id condition needed
+                                    }
                                 }),
                         ])
-                    ,
+                        ->validationMessages([
+                            'unique' => 'An override already exists for this resource, locale and team.',
+                        ]),
+
                     TextInput::make('value')
                         ->label('Value')
                         ->placeholder('e.g. Custom Path Label')
