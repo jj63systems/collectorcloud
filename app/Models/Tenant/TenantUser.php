@@ -16,7 +16,6 @@ use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
-
 class TenantUser extends Authenticatable implements HasEmailAuthentication, MustVerifyEmail, CanResetPasswordContract
 {
     use UsesTenantConnection;
@@ -28,11 +27,6 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
 
     protected $table = 'users';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
@@ -42,21 +36,11 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
         'current_team_id',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -91,32 +75,45 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
             ->logOnlyDirty();
     }
 
-
     public function sendPasswordSetupNotification(string $token): void
     {
         $this->notify(new WelcomeSetPassword($token));
     }
 
-
+    /**
+     * All teams this user belongs to.
+     */
     public function teams()
     {
         return $this->belongsToMany(
-            \App\Models\Tenant\CcTeam::class,
+            CcTeam::class,
             'cc_team_user',
             'user_id',
             'team_id'
         )->withTimestamps();
     }
 
-    public function currentTeam()
+    /**
+     * Accessor for the current team.
+     * Always returns a CcTeam instance or null.
+     */
+    public function getCurrentTeamAttribute(): ?CcTeam
     {
-        return $this->belongsTo(CcTeam::class, 'current_team_id');
+        return $this->current_team_id
+            ? CcTeam::find($this->current_team_id)
+            : null;
+    }
+
+    /**
+     * For HasTeamRoles (optional convenience).
+     */
+    public function currentTeam(): ?CcTeam
+    {
+        return $this->getCurrentTeamAttribute();
     }
 
     public function canAccess(string $permission, CcTeam $team): bool
     {
         return AccessService::canAccess($this, $team, $permission);
     }
-
-
 }

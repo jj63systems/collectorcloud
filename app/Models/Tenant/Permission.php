@@ -2,11 +2,12 @@
 
 namespace App\Models\Tenant;
 
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use Spatie\Permission\Models\Permission as SpatiePermission;
 
 class Permission extends SpatiePermission
 {
-    protected $connection = 'tenant';
+    use UsesTenantConnection;
 
     protected $fillable = [
         'name',

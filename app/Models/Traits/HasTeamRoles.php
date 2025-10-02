@@ -58,9 +58,9 @@ trait HasTeamRoles
     /**
      * Get the names of all roles the user has *effective* in the given team.
      */
-    public function getRoleNames(CcTeam $team = null)
+    public function getRoleNames(?CcTeam $team = null)
     {
-        $team = $team ?: $this->currentTeam;
+        $team = $this->resolveTeam($team);
         $cacheKey = 'roles:'.$team->id;
 
         if (isset($this->roleCache[$cacheKey])) {
@@ -81,9 +81,9 @@ trait HasTeamRoles
     /**
      * Check if the user has the given role(s) *effective* in the given team.
      */
-    public function hasRole($roles, CcTeam $team = null): bool
+    public function hasRole($roles, ?CcTeam $team = null): bool
     {
-        $team = $team ?: $this->currentTeam;
+        $team = $this->resolveTeam($team);
         $roles = (array) $roles;
         $cacheKey = 'hasRole:'.$team->id.':'.implode(',', $roles);
 
@@ -108,7 +108,20 @@ trait HasTeamRoles
      */
     public function hasPermissionTo($permission, $team = null, $guardName = null): bool
     {
+        // Case: called by Spatie with ($permission, $guardName)
+        if (is_string($team) && $guardName === null) {
+            $guardName = $team;
+            $team = null;
+        }
+
+        // Default to current team if none provided
         $team = $team ?: $this->currentTeam;
+
+        if (!$team instanceof CcTeam) {
+            // Fallback: use base Spatie logic (global check)
+            return $this->baseHasPermissionTo($permission, $guardName);
+        }
+
         $cacheKey = 'perm:'.$team->id.':'.$permission.':'.($guardName ?? 'web');
 
         if (isset($this->permissionCache[$cacheKey])) {
@@ -130,5 +143,21 @@ trait HasTeamRoles
             });
 
         return $this->permissionCache[$cacheKey] = $query->exists();
+    }
+
+    /**
+     * Helper: always resolve to a CcTeam instance.
+     */
+    protected function resolveTeam($team): CcTeam
+    {
+        if ($team instanceof CcTeam) {
+            return $team;
+        }
+
+        if ($team === null && $this->currentTeam instanceof CcTeam) {
+            return $this->currentTeam;
+        }
+
+        throw new \InvalidArgumentException('Expected instance of CcTeam, got '.gettype($team));
     }
 }

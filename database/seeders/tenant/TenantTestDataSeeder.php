@@ -1,18 +1,16 @@
 <?php
 
-namespace Database\Seeders\tenant;
+namespace Database\Seeders\Tenant;
 
 use App\Models\Tenant\CcTeam;
 use App\Models\Tenant\TenantUser;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 
 class TenantTestDataSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
         activity()->disableLogging();
@@ -38,19 +36,37 @@ class TenantTestDataSeeder extends Seeder
 
         // Create super user if it doesn't already exist
         $user = TenantUser::firstOrCreate(
-            ['email' => $dbName.'@example.com'], // lookup
+            ['email' => $dbName.'@example.com'],
             [
                 'name' => $dbName,
-                'password' => Hash::make('test1234'), // change as needed
+                'password' => Hash::make('test1234'),
                 'is_superuser' => true,
             ]
         );
+
+        if ($user->wasRecentlyCreated) {
+            \Log::info("Superuser created: {$user->email}");
+        } else {
+            \Log::info("Superuser already existed: {$user->email}");
+        }
 
         // Link superuser only to the Default Team and set current_team_id if missing
         $user->teams()->syncWithoutDetaching([$defaultTeam->id]);
 
         if (!$user->current_team_id) {
             $user->update(['current_team_id' => $defaultTeam->id]);
+        }
+
+        // ✅ Assign the "superuser" role if available
+        $superuserRole = Role::where('name', 'superuser')
+            ->where('guard_name', 'tenant')
+            ->first();
+
+        if ($superuserRole) {
+            $user->syncRoles([$superuserRole->name]);
+            \Log::info("Superuser role assigned to {$user->email}");
+        } else {
+            \Log::warning("Superuser role not found when seeding {$user->email}");
         }
     }
 }

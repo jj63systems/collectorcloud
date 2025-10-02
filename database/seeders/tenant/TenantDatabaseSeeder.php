@@ -31,9 +31,8 @@ class TenantDatabaseSeeder extends Seeder
 
         $this->call(TenantSettingsSeeder::class);
 
-
-        // Call new roles/permissions seeder
-        $this->call(CcRoleSeeder::class);
+        // Seed permissions
+        $this->call(PermissionAndRoleSeeder::class);
 
     }
 }

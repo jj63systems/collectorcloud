@@ -3,11 +3,12 @@
 namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 use Spatie\Permission\Models\Role as SpatieRole;
 
 class Role extends SpatieRole
 {
-    protected $connection = 'tenant';
+    use UsesTenantConnection;
 
     protected $fillable = [
         'name',
