@@ -8,6 +8,7 @@ use App\Filament\App\Resources\CcLocations\Pages\ListCcLocations;
 use App\Filament\App\Resources\CcLocations\Pages\ViewCcLocation;
 use App\Filament\App\Resources\CcLocations\Schemas\CcLocationForm;
 use App\Filament\App\Resources\CcLocations\Tables\CcLocationsTable;
+use App\Filament\Traits\HasNavigationPermission;
 use App\Models\Tenant\CcLocation;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -15,6 +16,8 @@ use Filament\Tables\Table;
 
 class CcLocationResource extends Resource
 {
+    use HasNavigationPermission;
+
     protected static ?string $model = CcLocation::class;
 
 
@@ -27,6 +30,12 @@ class CcLocationResource extends Resource
 
 
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'cc_locations.view';
+    }
+
     protected static ?string $navigationLabel = 'Reference > Locations';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)

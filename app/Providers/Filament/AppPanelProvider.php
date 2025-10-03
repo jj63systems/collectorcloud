@@ -4,7 +4,6 @@ namespace App\Providers\Filament;
 
 use App\Filament\App\Pages\DataLoad;
 use App\Http\Middleware\MyMiddleware;
-use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -35,18 +34,18 @@ class AppPanelProvider extends PanelProvider
             ->login()
             ->passwordReset()
             ->authGuard('tenant')
-            ->multiFactorAuthentication(
-                [
-                    EmailAuthentication::make()->codeExpiryMinutes(5),
-                ],
-                isRequired: true
-            )
+//            ->multiFactorAuthentication(
+//                [
+//                    EmailAuthentication::make()->codeExpiryMinutes(5),
+//                ],
+//                isRequired: true
+//            )
             ->brandName('CollectorCloud')
             ->userMenuItems([
 //
             ])
             ->renderHook(
-                PanelsRenderHook::TOPBAR_AFTER,
+                PanelsRenderHook::SIDEBAR_NAV_START,
                 function () {
                     return view('components.active-team', [
                         'team' => auth()->user()?->currentTeam?->name,
@@ -61,6 +60,7 @@ class AppPanelProvider extends PanelProvider
             ->pages([
                 Dashboard::class,
                 DataLoad::class,
+//                TeamSelect::class,
             ])
             ->discoverWidgets(in: app_path('Filament/App/Widgets'), for: 'App\Filament\App\Widgets')
             ->widgets([

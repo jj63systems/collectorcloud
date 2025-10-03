@@ -61,6 +61,11 @@ trait HasTeamRoles
     public function getRoleNames(?CcTeam $team = null)
     {
         $team = $this->resolveTeam($team);
+
+        if (!$team) {
+            return collect(); // gracefully return empty
+        }
+
         $cacheKey = 'roles:'.$team->id;
 
         if (isset($this->roleCache[$cacheKey])) {
@@ -84,6 +89,11 @@ trait HasTeamRoles
     public function hasRole($roles, ?CcTeam $team = null): bool
     {
         $team = $this->resolveTeam($team);
+
+        if (!$team) {
+            return false; // no team context means no roles
+        }
+
         $roles = (array) $roles;
         $cacheKey = 'hasRole:'.$team->id.':'.implode(',', $roles);
 
@@ -114,10 +124,9 @@ trait HasTeamRoles
             $team = null;
         }
 
-        // Default to current team if none provided
-        $team = $team ?: $this->currentTeam;
+        $team = $this->resolveTeam($team);
 
-        if (!$team instanceof CcTeam) {
+        if (!$team) {
             // Fallback: use base Spatie logic (global check)
             return $this->baseHasPermissionTo($permission, $guardName);
         }
@@ -146,9 +155,9 @@ trait HasTeamRoles
     }
 
     /**
-     * Helper: always resolve to a CcTeam instance.
+     * Helper: try to resolve to a CcTeam instance.
      */
-    protected function resolveTeam($team): CcTeam
+    protected function resolveTeam($team): ?CcTeam
     {
         if ($team instanceof CcTeam) {
             return $team;
@@ -158,6 +167,6 @@ trait HasTeamRoles
             return $this->currentTeam;
         }
 
-        throw new \InvalidArgumentException('Expected instance of CcTeam, got '.gettype($team));
+        return null; // gracefully return null instead of throwing
     }
 }

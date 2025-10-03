@@ -16,4 +16,6 @@ Route::prefix('tenant')->group(function () {
     // Handle the reset POST
     Route::post('reset-password', [TenantPasswordResetController::class, 'reset'])
         ->name('tenant.password.update');
+
+    Route::get('/no-team', fn() => 'No team assigned')->name('no-team');
 });
