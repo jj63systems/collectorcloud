@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Models\Tenant\CcLabelOverride;
-use App\Models\Tenant\CcResource;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class LabelService
@@ -22,15 +20,13 @@ class LabelService
         $locale = app()->getLocale();
 
         // Find resource
-        $resource = CcResource::where('code', $resourceCode)->first();
-        if (!$resource) {
-            return $hardDefault; // unknown resource
+        $resourceId = \App\Services\ResourceContext::getResourceId($resourceCode);
+        if (!$resourceId) {
+            return $hardDefault;
         }
-        $resourceId = $resource->id;
 
         // Get current user + team
-        $user = Auth::user();
-        $teamId = $user?->teams()->first()?->id;
+        $teamId = \App\Services\TeamContext::getCurrentTeamId();
 
         // Cache key
         $cacheKey = "resource:{$resourceId}:locale:{$locale}:team:{$teamId}";

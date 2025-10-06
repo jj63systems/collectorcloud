@@ -9,6 +9,7 @@ use App\Filament\App\Resources\CcLocations\Pages\ViewCcLocation;
 use App\Filament\App\Resources\CcLocations\Schemas\CcLocationForm;
 use App\Filament\App\Resources\CcLocations\Tables\CcLocationsTable;
 use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\CcLocation;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,6 +18,8 @@ use Filament\Tables\Table;
 class CcLocationResource extends Resource
 {
     use HasNavigationPermission;
+
+    use HasResourcePermissions;
 
     protected static ?string $model = CcLocation::class;
 
@@ -52,6 +55,7 @@ class CcLocationResource extends Resource
     protected static ?int $navigationSort = 30;
 
     // END TITLES AND NAV SETTINGS ----------------------------
+
 
     public static function form(Schema $schema): Schema
     {

@@ -25,6 +25,8 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     use CanResetPassword;
     use HasTeamRoles;
 
+    protected ?CcTeam $cachedCurrentTeam = null;
+
     protected $table = 'users';
 
     protected $fillable = [
@@ -94,22 +96,35 @@ class TenantUser extends Authenticatable implements HasEmailAuthentication, Must
     }
 
     /**
-     * Accessor for the current team.
-     * Always returns a CcTeam instance or null.
+     * Define the current team relation.
      */
-    public function getCurrentTeamAttribute(): ?CcTeam
+    public function currentTeamRelation()
     {
-        return $this->current_team_id
-            ? CcTeam::find($this->current_team_id)
-            : null;
+        return $this->belongsTo(CcTeam::class, 'current_team_id');
     }
 
     /**
-     * For HasTeamRoles (optional convenience).
+     * Accessor for the current team.
+     * Always returns a CcTeam instance or null.
+     * Uses eager-loaded relation if available.
+     */
+    public function getCurrentTeamAttribute(): ?CcTeam
+    {
+        if ($this->cachedCurrentTeam !== null) {
+            return $this->cachedCurrentTeam;
+        }
+
+        return $this->cachedCurrentTeam = $this->relationLoaded('currentTeamRelation')
+            ? $this->getRelationValue('currentTeamRelation')
+            : $this->currentTeamRelation()->getResults();
+    }
+
+    /**
+     * Optional convenience method.
      */
     public function currentTeam(): ?CcTeam
     {
-        return $this->getCurrentTeamAttribute();
+        return $this->current_team;
     }
 
     public function canAccess(string $permission, CcTeam $team): bool

@@ -27,6 +27,8 @@ class ViewCcLocation extends ViewRecord
                         Schema::make()
                     )->getComponents()
                 )
+                // restrict edit to users with edit permission
+                ->visible(fn($record) => static::getResource()::canEdit($record))
                 ->action(function (array $data, $record): void {
                     $record->fill($data);
                     $record->save();   // cascadePathUpdate will fire via model event
