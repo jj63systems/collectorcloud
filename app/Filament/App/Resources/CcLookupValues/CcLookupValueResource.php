@@ -6,6 +6,8 @@ use App\Filament\App\Resources\CcLookupValues\Pages\CreateCcLookupValue;
 use App\Filament\App\Resources\CcLookupValues\Pages\ListCcLookupValues;
 use App\Filament\App\Resources\CcLookupValues\Schemas\CcLookupValueForm;
 use App\Filament\App\Resources\CcLookupValues\Tables\CcLookupValuesTable;
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\CcLookupValue;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -13,6 +15,11 @@ use Filament\Tables\Table;
 
 class CcLookupValueResource extends Resource
 {
+
+    use HasNavigationPermission;
+
+    use HasResourcePermissions;
+
     protected static ?string $model = CcLookupValue::class;
 
 
@@ -22,7 +29,14 @@ class CcLookupValueResource extends Resource
     protected static bool $isGloballySearchable = false;
     // END global search settings
 
+
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'cc_lookup_values.view';
+    }
+
     protected static ?string $navigationLabel = 'Reference > Lookup Values';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)

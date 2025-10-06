@@ -7,6 +7,8 @@ use App\Filament\App\Resources\CcLabelOverrides\Pages\EditCcLabelOverride;
 use App\Filament\App\Resources\CcLabelOverrides\Pages\ListCcLabelOverrides;
 use App\Filament\App\Resources\CcLabelOverrides\Schemas\CcLabelOverrideForm;
 use App\Filament\App\Resources\CcLabelOverrides\Tables\CcLabelOverridesTable;
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\CcLabelOverride;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -14,7 +16,9 @@ use Filament\Tables\Table;
 
 class CcLabelOverrideResource extends Resource
 {
+    use HasNavigationPermission;
 
+    use HasResourcePermissions;
 
     // -- TITLES AND NAV SETTINGS -----------------------------
 
@@ -25,6 +29,12 @@ class CcLabelOverrideResource extends Resource
 
 
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'cc_label_overrides.view';
+    }
+
     protected static ?string $navigationLabel = 'System > Screen texts';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)

@@ -2,6 +2,8 @@
 
 namespace App\Filament\App\Pages;
 
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
@@ -25,6 +27,11 @@ class DataLoad extends Page implements HasForms
 {
     use InteractsWithForms;
 
+    use HasNavigationPermission;
+
+    use HasResourcePermissions;
+
+
     // -- TITLES AND NAV SETTINGS -----------------------------
 
     // Global search settings
@@ -32,6 +39,12 @@ class DataLoad extends Page implements HasForms
     protected static bool $isGloballySearchable = false;
     // END global search settings
 
+    // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'data_load.view';
+    }
 
     // ✅ Appears in sidebar navigation
     protected static ?string $navigationLabel = 'Data load';

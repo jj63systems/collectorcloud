@@ -9,6 +9,8 @@ use App\Filament\App\Resources\Users\Pages\ViewUser;
 use App\Filament\App\Resources\Users\Schemas\UserForm;
 use App\Filament\App\Resources\Users\Schemas\UserInfolist;
 use App\Filament\App\Resources\Users\Tables\UsersTable;
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\TenantUser as User;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -16,6 +18,11 @@ use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
+
+    use HasNavigationPermission;
+
+    use HasResourcePermissions;
+
     protected static ?string $model = User::class;
 
 
@@ -27,6 +34,12 @@ class UserResource extends Resource
     // END global search settings
 
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'users.view';
+    }
+
     protected static ?string $navigationLabel = 'Security > User management';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)

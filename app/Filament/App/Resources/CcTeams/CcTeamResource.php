@@ -8,6 +8,8 @@ use App\Filament\App\Resources\CcTeams\Pages\ListCcTeams;
 use App\Filament\App\Resources\CcTeams\RelationManagers\UsersRelationManager;
 use App\Filament\App\Resources\CcTeams\Schemas\CcTeamForm;
 use App\Filament\App\Resources\CcTeams\Tables\CcTeamsTable;
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\CcTeam;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -15,6 +17,11 @@ use Filament\Tables\Table;
 
 class CcTeamResource extends Resource
 {
+
+    use HasNavigationPermission;
+
+    use HasResourcePermissions;
+
     protected static ?string $model = CcTeam::class;
 
     // -- TITLES AND NAV SETTINGS -----------------------------
@@ -25,6 +32,12 @@ class CcTeamResource extends Resource
     // END global search settings
 
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'cc_teams.view';
+    }
+
     protected static ?string $navigationLabel = 'Security > Teams';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)

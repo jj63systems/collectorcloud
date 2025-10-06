@@ -7,6 +7,8 @@ use App\Filament\App\Resources\Roles\Pages\EditRole;
 use App\Filament\App\Resources\Roles\Pages\ListRoles;
 use App\Filament\App\Resources\Roles\Schemas\RoleForm;
 use App\Filament\App\Resources\Roles\Tables\RolesTable;
+use App\Filament\Traits\HasNavigationPermission;
+use App\Filament\Traits\HasResourcePermissions;
 use App\Models\Tenant\Role;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -14,6 +16,11 @@ use Filament\Tables\Table;
 
 class RoleResource extends Resource
 {
+
+    use HasNavigationPermission;
+
+    use HasResourcePermissions;
+
     protected static ?string $model = Role::class;
 
     // -- TITLES AND NAV SETTINGS -----------------------------
@@ -24,6 +31,12 @@ class RoleResource extends Resource
     // END global search settings
 
     // ✅ Appears in sidebar navigation
+
+    protected static function getNavigationPermission(): string
+    {
+        return 'roles.view';
+    }
+
     protected static ?string $navigationLabel = 'Security > Roles';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
