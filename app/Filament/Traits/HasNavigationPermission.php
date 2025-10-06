@@ -9,7 +9,6 @@ trait HasNavigationPermission
 {
     public static function shouldRegisterNavigation(): bool
     {
-
         Log::info('Starting check');
         $user = Auth::user();
 
@@ -18,18 +17,21 @@ trait HasNavigationPermission
             return false;
         }
 
-        // ✅ Always show nav for superusers
+        // Always show nav for superusers
         if ($user->is_superuser ?? false) {
             Log::info('Superuser');
             return true;
         }
-        Log::info('Finished check');
 
-
-        // Each resource can define its "base permission"
         $permission = static::getNavigationPermission();
+        $hasPermission = $user->hasPermissionTo($permission, 'tenant');
+        Log::info("Checking permission: $permission => ".($hasPermission ? 'true' : 'false'));
+        // ✅ Explicit guard-aware check
+        $result = (bool) $user->hasPermissionTo($permission, 'tenant');
 
-        return $user->can($permission);
+        Log::info("Return value = ".var_export($result, true));
+
+        return $result;
     }
 
 

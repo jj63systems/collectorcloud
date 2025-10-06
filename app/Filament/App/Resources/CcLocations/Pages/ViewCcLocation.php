@@ -27,7 +27,32 @@ class ViewCcLocation extends ViewRecord
                         Schema::make()
                     )->getComponents()
                 )
-                // restrict edit to users with edit permission
+                ->extraModalFooterActions([
+                    \Filament\Actions\Action::make('delete')
+                        ->label('Delete')
+                        ->color('danger')
+                        ->icon('heroicon-o-trash')
+                        ->requiresConfirmation()
+                        ->visible(fn($record) => static::getResource()::canDelete($record))
+                        ->action(function ($record) {
+                            if (!$record->canDelete()) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('This location has child locations and cannot be deleted.')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            $record->delete();
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Location deleted')
+                                ->success()
+                                ->send();
+
+                            $this->redirect(CcLocationResource::getUrl('index'));
+                        }),
+                ])
                 ->visible(fn($record) => static::getResource()::canEdit($record))
                 ->action(function (array $data, $record): void {
                     $record->fill($data);

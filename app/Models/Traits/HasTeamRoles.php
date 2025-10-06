@@ -137,21 +137,12 @@ trait HasTeamRoles
             return $this->permissionCache[$cacheKey];
         }
 
-        $query = $this->baseRoles()
-            ->whereIn('roles.id', function ($q) use ($team) {
-                $q->select('role_id')
-                    ->from('team_allowed_roles')
-                    ->where('team_id', $team->id);
-            })
-            ->whereHas('permissions', function ($q) use ($permission, $guardName) {
-                $q->where('name', $permission);
-
-                if ($guardName) {
-                    $q->where('guard_name', $guardName);
-                }
-            });
-
-        return $this->permissionCache[$cacheKey] = $query->exists();
+        return $this->permissionCache[$cacheKey] = \App\Services\PermissionContext::userHas(
+            $this,
+            $team,
+            $permission,
+            $guardName ?? 'web'
+        );
     }
 
     /**

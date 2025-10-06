@@ -31,11 +31,14 @@ class PermissionsRelationManager extends RelationManager
             ->headerActions([
                 AttachAction::make()
                     ->label('Attach Permission')
-                    ->recordSelect(fn($select) => $select
-                        ->searchable()
-                        ->preload()
-                        ->placeholder('Select a permission')
-                    ),
+                    ->recordSelect(function ($select) {
+                        return $select
+                            ->relationship('permissions',
+                                'name') // explicitly tell it the relationship + display column
+                            ->preload()
+                            ->searchable()
+                            ->placeholder('Select a permission');
+                    }),
             ])
             ->recordActions([
                 DetachAction::make()
