@@ -2,7 +2,6 @@
 
 namespace App\Filament\App\Resources\CcLocations\Schemas;
 
-use App\Models\Tenant\CcLocation;
 use App\Models\Tenant\CcLookupValue;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -48,10 +47,13 @@ class CcLocationForm
                     Grid::make(1)->schema([
                         Select::make('parent_id')
                             ->label(mylabel('cc_locations', 'fields.parent', 'Parent Location'))
-                            ->options(fn() => CcLocation::all()->pluck('path', 'id'))
+                            ->options(fn($record) => \App\Models\Tenant\CcLocation::query()
+                                ->when($record, fn($q) => $q->where('id', '!=', $record->id))
+                                ->pluck('path', 'id')
+                            )
                             ->searchable()
                             ->preload()
-                            ->nullable(),
+                            ->nullable()
                     ]),
                 ]),
 

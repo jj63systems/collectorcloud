@@ -4,6 +4,7 @@ namespace App\Models\Tenant;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
@@ -20,32 +21,60 @@ class CcLookupValue extends Model
         'label',
         'sort_order',
         'system_flag',
+        'enabled',
     ];
 
     protected $casts = [
         'system_flag' => 'boolean',
+        'enabled' => 'boolean',
     ];
 
+    /**
+     * The lookup type this value belongs to.
+     */
     public function type(): BelongsTo
     {
         return $this->belongsTo(CcLookupType::class, 'type_id');
     }
 
-    public function getActivitylogOptions(): LogOptions
+    /**
+     * Teams that this lookup value is available to (team-scoped types only).
+     */
+    public function teams(): BelongsToMany
     {
-        return LogOptions::defaults()
-            ->logOnly(['label', 'sort_order', 'enabled'])
-            ->useLogName('Lookup Values')
-            ->logOnlyDirty(); // optional: use a custom log name
+        return $this->belongsToMany(
+            CcTeam::class,
+            'cc_lookup_value_team',
+            'lookup_value_id',
+            'team_id'
+        )->withTimestamps()
+            ->withPivot(['is_default', 'meta']);
     }
 
+    /**
+     * Scope: only enabled values.
+     */
+    public function scopeEnabled($query)
+    {
+        return $query->where('enabled', true);
+    }
+
+    /**
+     * Automatically uppercase the code.
+     */
     public function setCodeAttribute($value): void
     {
         $this->attributes['code'] = strtoupper($value);
     }
 
-    public function scopeEnabled($query)
+    /**
+     * Activity logging setup.
+     */
+    public function getActivitylogOptions(): LogOptions
     {
-        return $query->where('enabled', true);
+        return LogOptions::defaults()
+            ->logOnly(['label', 'sort_order', 'enabled'])
+            ->useLogName('Lookup Values')
+            ->logOnlyDirty();
     }
 }

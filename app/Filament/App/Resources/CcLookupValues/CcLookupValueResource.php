@@ -3,6 +3,7 @@
 namespace App\Filament\App\Resources\CcLookupValues;
 
 use App\Filament\App\Resources\CcLookupValues\Pages\CreateCcLookupValue;
+use App\Filament\App\Resources\CcLookupValues\Pages\EditCcLookupValue;
 use App\Filament\App\Resources\CcLookupValues\Pages\ListCcLookupValues;
 use App\Filament\App\Resources\CcLookupValues\Schemas\CcLookupValueForm;
 use App\Filament\App\Resources\CcLookupValues\Tables\CcLookupValuesTable;
@@ -77,7 +78,7 @@ class CcLookupValueResource extends Resource
         return [
             'index' => ListCcLookupValues::route('/'),
             'create' => CreateCcLookupValue::route('/create'),
-//            'edit' => EditCcLookupValue::route('/{record}/edit'),
+            'edit' => EditCcLookupValue::route('/{record}/edit'),
         ];
     }
 }

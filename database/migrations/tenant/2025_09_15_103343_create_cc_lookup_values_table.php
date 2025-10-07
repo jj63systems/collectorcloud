@@ -9,15 +9,19 @@ return new class extends Migration {
     {
         Schema::create('cc_lookup_values', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('type_id')->constrained('cc_lookup_types')->onDelete('cascade');
-            $table->string('code');        // e.g. MALE
-            $table->string('label');       // e.g. Male
+            $table->foreignId('type_id')
+                ->constrained('cc_lookup_types')
+                ->onDelete('cascade');
+            $table->string('code');                     // e.g. MALE
+            $table->string('label');                    // e.g. Male
             $table->unsignedInteger('sort_order')->default(0);
-            $table->boolean('system_flag')->default(false); // prevent user deletion/edit
+            $table->boolean('system_flag')->default(false)
+                ->comment('Protect system-defined values from edit/delete');
             $table->boolean('enabled')->default(true);
             $table->timestamps();
 
             $table->unique(['type_id', 'code']);
+            $table->index(['type_id', 'enabled', 'sort_order']);
         });
     }
 
