@@ -14,7 +14,7 @@ trait HasResourcePermissions
 
     protected static function checkPermission(string $action): bool
     {
-        Log::info('checkPermission: '.$action);
+//        Log::info('checkPermission: '.$action);
 
         $user = Auth::user();
         if (!$user) {
@@ -22,14 +22,14 @@ trait HasResourcePermissions
         }
 
         if ($user->is_superuser ?? false) {
-            Log::info('Superuser');
+//            Log::info('Superuser');
             return true;
         }
 
-        Log::info($user);
+//        Log::info($user);
 
         $resourceKey = static::$resourceKey ?? static::getResourceKey();
-        Log::info('Resource key:'.$resourceKey);
+//        Log::info('Resource key:'.$resourceKey);
 
         return $user->hasPermissionTo("{$resourceKey}.{$action}", 'tenant');
     }
