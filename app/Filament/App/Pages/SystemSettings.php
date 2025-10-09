@@ -6,6 +6,7 @@ use App\Models\Tenant\CcSetting;
 use App\Models\Tenant\CcSettingGroup;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Field;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -20,6 +21,7 @@ use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Log;
 
+
 class SystemSettings extends Page implements HasSchemas
 {
     use InteractsWithSchemas;
@@ -33,7 +35,6 @@ class SystemSettings extends Page implements HasSchemas
     // -- TITLES AND NAV SETTINGS -----------------------------
 
     // Global search settings
-//    protected static ?string $recordTitleAttribute = 'name';
     protected static bool $isGloballySearchable = false;
     // END global search settings
 
@@ -61,6 +62,10 @@ class SystemSettings extends Page implements HasSchemas
 
     // END TITLES AND NAV SETTINGS ----------------------------
     public ?array $data = [];
+
+
+    // Inside class SystemSettings extends Page
+    public array $unlockedSettings = [];
 
     public function mount(): void
     {
@@ -152,25 +157,23 @@ class SystemSettings extends Page implements HasSchemas
             default => TextInput::make($setting->setting_code),
         };
 
-        // --- Emoji color preview for color_scheme ---
+        // -- Color preview for color_scheme (only if using select) --
         if ($setting->setting_code === 'color_scheme' && $field instanceof Select) {
             $colorKeys = [
                 'sky', 'blue', 'indigo', 'purple', 'pink', 'rose',
                 'red', 'orange', 'amber',
-//                'yellow', -- for some reason this doesn't show a color preview
-                'lime', 'green',
-                'emerald', 'teal', 'cyan', 'slate', 'gray', 'zinc',
+                'lime', 'green', 'emerald', 'teal', 'cyan', 'slate', 'gray', 'zinc',
             ];
 
             $swatchOptions = collect($options)
                 ->filter(fn($label, $value) => in_array($value, $colorKeys))
                 ->mapWithKeys(function ($label, $value) {
                     $html = <<<HTML
-<div class="flex items-center gap-2">
-    <span class="w-4 h-4 rounded-full bg-{$value}-500 border border-gray-300 shadow-sm"></span>
-    <span>{$label}</span>
-</div>
-HTML;
+                            <div class="flex items-center gap-2">
+                                <span class="w-4 h-4 rounded-full bg-{$value}-500 border border-gray-300 shadow-sm"></span>
+                                <span>{$label}</span>
+                            </div>
+                            HTML;
                     return [$value => $html];
                 })
                 ->all();
@@ -178,8 +181,32 @@ HTML;
             $field->options($swatchOptions)->allowHtml();
         }
 
-        return $field;
 
+        if ($setting->is_locked) {
+            // Disable until unlocked
+            $field->disabled(function (Field $component, $livewire) use ($setting): bool {
+                return !in_array($setting->setting_code, $livewire->unlockedSettings, true);
+            });
+
+            $field->suffixAction(
+                Action::make('unlock')
+                    ->icon('heroicon-o-lock-closed')
+                    ->tooltip('Unlock to edit')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Unlock setting')
+                    ->modalDescription(
+                        $setting->unlock_message ?: 'Are you sure you want to change this setting?'
+                    )
+                    ->action(function ($livewire) use ($setting): void {
+                        // $livewire is your SystemSettings page instance
+                        $livewire->unlockedSettings[] = $setting->setting_code;
+                    })
+            );
+        }
+
+
+        return $field;
     }
 
     protected function optionsFor(CcSetting $setting): array

@@ -33,6 +33,8 @@ class CcSettingsSeeder extends Seeder
                         'setting_label' => $setting['label'] ?? ucfirst($settingCode),
                         'setting_value' => $setting['default'] ?? null,
                         'default_value' => $setting['default'] ?? null,
+                        'is_locked' => $setting['is_locked'] ?? false,
+                        'unlock_message' => $setting['unlock_message'] ?? null,
                         'value_presentation' => $setting['presentation'] ?? 'text',
                         'description' => $setting['description'] ?? null,
                         'options_json' => isset($setting['options'])

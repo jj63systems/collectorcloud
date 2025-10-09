@@ -21,6 +21,12 @@ class CcSetting extends Model
         'description',
         'options_json',
         'display_seq',
+        'is_locked',
+        'unlock_message',
+    ];
+
+    protected $casts = [
+        'is_locked' => 'boolean',
     ];
 
     public function group()

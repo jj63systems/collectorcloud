@@ -23,6 +23,8 @@ return new class extends Migration {
 
             $table->string('setting_code')->index();        // e.g. 'language'
             $table->string('setting_label');                // e.g. 'Language'
+            $table->boolean('is_locked')->default(false);
+            $table->text('unlock_message')->nullable();
             $table->text('setting_value')->nullable();      // Current saved value
             $table->text('default_value')->nullable();      // Default from config
 

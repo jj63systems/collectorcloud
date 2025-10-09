@@ -78,6 +78,8 @@ return [
                 'label' => 'Preferred AI Model',
                 'order' => 10,
                 'default' => 'gpt-4o',
+                'is_locked' => true,
+                'unlock_message' => 'Warning: changing the AI model may have unpredictable results and is not recommended unless advised by an expert.',
                 'presentation' => 'select',
                 'options' => [
                     'gpt-4o' => 'OpenAI GPT-4 Omni',
