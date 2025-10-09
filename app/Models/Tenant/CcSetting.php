@@ -12,9 +12,15 @@ class CcSetting extends Model
     protected $table = 'cc_settings';
 
     protected $fillable = [
-        'setting_code',
-        'setting_value',
         'setting_group_id',
+        'setting_code',
+        'setting_label',
+        'setting_value',
+        'default_value',
+        'value_presentation',
+        'description',
+        'options_json',
+        'display_seq',
     ];
 
     public function group()
