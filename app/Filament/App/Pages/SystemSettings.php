@@ -154,42 +154,32 @@ class SystemSettings extends Page implements HasSchemas
 
         // --- Emoji color preview for color_scheme ---
         if ($setting->setting_code === 'color_scheme' && $field instanceof Select) {
-            $emojiColors = [
-                'amber' => '🟠',  // orange-yellow
-                'blue' => '🔵',  // pure blue
-                'cyan' => '🟦',  // light blue
-                'emerald' => '🟩',  // greenish
-                'fuchsia' => '🌸',  // pink-magenta
-                'gray' => '⚫',  // dark gray
-                'green' => '🟢',  // medium green
-                'indigo' => '🟪',  // indigo/purple
-                'lime' => '🟩',  // bright green
-                'orange' => '🟧',  // orange
-                'pink' => '💗',  // lighter pink
-                'purple' => '🟣',  // purple
-                'red' => '🔴',  // red
-                'rose' => '🌹',  // rose red
-                'sky' => '🩵',  // sky blue (new emoji, very close)
-                'slate' => '⚫',  // dark neutral gray
-                'teal' => '🦚',  // teal (closest available teal-hued emoji)
-                'violet' => '💜',  // violet purple
-                'yellow' => '🟡',  // yellow
-                'zinc' => '⬛',  // dark neutral
+            $colorKeys = [
+                'sky', 'blue', 'indigo', 'purple', 'pink', 'rose',
+                'red', 'orange', 'amber',
+//                'yellow', -- for some reason this doesn't show a color preview
+                'lime', 'green',
+                'emerald', 'teal', 'cyan', 'slate', 'gray', 'zinc',
             ];
 
-            // Create emoji-prefixed labels, sorted alphabetically
-            $emojiOptions = collect($options)
-                ->sortKeys()
-                ->mapWithKeys(function ($label, $value) use ($emojiColors) {
-                    $emoji = $emojiColors[strtolower($value)] ?? '⚪';
-                    return [$value => "{$emoji} {$label}"];
+            $swatchOptions = collect($options)
+                ->filter(fn($label, $value) => in_array($value, $colorKeys))
+                ->mapWithKeys(function ($label, $value) {
+                    $html = <<<HTML
+<div class="flex items-center gap-2">
+    <span class="w-4 h-4 rounded-full bg-{$value}-500 border border-gray-300 shadow-sm"></span>
+    <span>{$label}</span>
+</div>
+HTML;
+                    return [$value => $html];
                 })
                 ->all();
 
-            $field->options($emojiOptions)->allowHtml();
+            $field->options($swatchOptions)->allowHtml();
         }
 
         return $field;
+
     }
 
     protected function optionsFor(CcSetting $setting): array
@@ -206,22 +196,13 @@ class SystemSettings extends Page implements HasSchemas
                 'red' => 'Red',
                 'orange' => 'Orange',
                 'amber' => 'Amber',
-                'yellow' => 'Yellow',
+//                'yellow' => 'Yellow', -- for some reason this doesn't show a color preview'
                 'lime' => 'Lime',
                 'green' => 'Green',
                 'emerald' => 'Emerald',
                 'teal' => 'Teal',
                 'cyan' => 'Cyan',
                 'slate' => 'Slate',
-            ];
-        }
-
-        // Language options (ensure these never return empty)
-        if ($setting->setting_code === 'lang') {
-            return [
-                'en' => 'English',
-                'fr' => 'French',
-                'de' => 'German',
             ];
         }
 

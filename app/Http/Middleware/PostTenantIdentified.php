@@ -8,11 +8,11 @@ use Filament\Support\Facades\FilamentColor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-class MyMiddleware
+class PostTenantIdentified
 {
     public function handle(Request $request, Closure $next)
     {
-        Log::info('MyMiddleware executed for path: '.$request->path());
+        Log::info('PostTenantIdentified executed for path: '.$request->path());
 
         $tenant = app('currentTenant');
         Log::info($tenant ? "Tenant identified: {$tenant->id}" : 'No tenant identified');

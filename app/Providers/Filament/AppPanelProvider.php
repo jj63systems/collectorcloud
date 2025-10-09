@@ -3,7 +3,10 @@
 namespace App\Providers\Filament;
 
 use App\Filament\App\Pages\DataLoad;
-use App\Http\Middleware\MyMiddleware;
+use App\Http\Middleware\EnforceTenantMfa;
+use App\Http\Middleware\PostTenantIdentified;
+use App\Http\Middleware\ResolveTenantMfaSetting;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -34,12 +37,12 @@ class AppPanelProvider extends PanelProvider
             ->login()
             ->passwordReset()
             ->authGuard('tenant')
-//            ->multiFactorAuthentication(
-//                [
-//                    EmailAuthentication::make()->codeExpiryMinutes(5),
-//                ],
-//                isRequired: true
-//            )
+            ->multiFactorAuthentication(
+                [
+                    EmailAuthentication::make()->codeExpiryMinutes(5),
+                ],
+//                isRequired: fn() => app()->bound('require_mfa') && app('require_mfa') === true
+            )
             ->brandName('CollectorCloud')
             ->userMenuItems([
 //
@@ -79,12 +82,9 @@ class AppPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                MyMiddleware::class,
+                PostTenantIdentified::class,
 
             ])
-//            ->colors([
-//                'primary' => ccsetting('color_scheme')
-//            ])
             ->authMiddleware([
                 Authenticate::class,
             ])

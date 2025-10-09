@@ -33,28 +33,39 @@ return [
             'textsettings' => [
                 'label' => 'Alter screen texts',
                 'order' => 20,
-
                 'default' => true,
                 'presentation' => 'boolean',
                 'description' => 'Choose whether to use your own terminology for field labels and other texts.',
             ],
 
-
             'color_scheme' => [
                 'label' => 'Color Scheme',
                 'order' => 30,
-
-                'default' => 'grey',
+//                'default' => 'grey',
                 'presentation' => 'select',
                 'options' => [
-                    'Grey' => 'grey',
-                    'Beige' => 'beige',
+                    'Sky' => 'sky',
+                    'Blue' => 'blue',
+                    'Indigo' => 'indigo',
+                    'Purple' => 'purple',
+                    'Pink' => 'pink',
+                    'Rose' => 'rose',
+                    'Red' => 'red',
+                    'Orange' => 'orange',
+                    'Amber' => 'amber',
+//                    'Yellow' => 'yellow',
+                    'Lime' => 'lime',
+                    'Green' => 'green',
+                    'Emerald' => 'emerald',
+                    'Teal' => 'teal',
+                    'Cyan' => 'cyan',
+                    'Slate' => 'slate',
+                    'Gray' => 'gray',
+                    'Zinc' => 'zinc',
                 ],
                 'description' => 'Choose the color scheme for the system.',
             ],
 
-
-            // repeat the above for other settings ...
         ],
     ],
 
@@ -65,6 +76,7 @@ return [
 
             'model' => [
                 'label' => 'Preferred AI Model',
+                'order' => 10,
                 'default' => 'gpt-4o',
                 'presentation' => 'select',
                 'options' => [
@@ -76,19 +88,18 @@ return [
 
             'context_window' => [
                 'label' => 'Max Context Tokens',
-                'order' => 10,
-
+                'order' => 20,
                 'default' => 4096,
                 'presentation' => 'number',
             ],
 
             'enable_experimental_features' => [
                 'label' => 'Enable Experimental AI Features',
-                'order' => 20,
-
+                'order' => 30,
                 'default' => false,
                 'presentation' => 'boolean',
             ],
         ],
     ],
+
 ];
