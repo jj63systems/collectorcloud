@@ -9,11 +9,13 @@ use App\Filament\App\Resources\CcFieldMappings\Schemas\CcFieldMappingForm;
 use App\Filament\App\Resources\CcFieldMappings\Tables\CcFieldMappingsTable;
 use App\Models\Tenant\CcFieldMapping;
 use BackedEnum;
+use Database\Seeders\Tenant\CcFieldMappingsSeeder;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class CcFieldMappingResource extends Resource
 {
@@ -43,8 +45,18 @@ class CcFieldMappingResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        $teamId = Auth::user()?->current_team_id;
+
+        if ($teamId) {
+            // Auto-seed default mappings if none exist
+            if (!\App\Models\Tenant\CcFieldMapping::where('team_id', $teamId)->exists()) {
+                CcFieldMappingsSeeder::seedForTeam($teamId);
+            }
+        }
+
         return parent::getEloquentQuery()
-            ->with('type');
+            ->with('type')
+            ->when($teamId, fn($query) => $query->where('team_id', $teamId));
     }
 
     public static function getPages(): array

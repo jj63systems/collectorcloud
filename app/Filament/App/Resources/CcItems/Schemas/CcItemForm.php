@@ -3,12 +3,12 @@
 namespace App\Filament\App\Resources\CcItems\Schemas;
 
 use App\Models\Tenant\CcFieldMapping;
-use App\Models\Tenant\CcTeam;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Auth;
 
 class CcItemForm
 {
@@ -27,26 +27,22 @@ class CcItemForm
         ];
 
         // TEMP: Use first team
-        $teamId = CcTeam::query()->value('id');
+        $teamId = Auth::user()?->current_team_id;
 
         if ($teamId) {
             $fieldMappings = CcFieldMapping::forTeam($teamId);
 
             foreach ($fieldMappings as $field) {
-                $components[] = match ($field->data_type) {
+                $base = match ($field->data_type) {
                     'TEXT' => TextInput::make($field->field_name)
-                        ->label($field->label)
                         ->maxLength($field->max_length ?? 255),
 
                     'NUMBER' => TextInput::make($field->field_name)
-                        ->label($field->label)
                         ->numeric(),
 
-                    'DATE' => DatePicker::make($field->field_name)
-                        ->label($field->label),
+                    'DATE' => DatePicker::make($field->field_name),
 
                     'LOOKUP' => Select::make($field->field_name)
-                        ->label($field->label)
                         ->options(function () use ($field) {
                             if (!$field->lookup_type_id) {
                                 return [];
@@ -60,9 +56,15 @@ class CcItemForm
                                 ->toArray();
                         }),
 
-                    default => TextInput::make($field->field_name)
-                        ->label($field->label),
+                    default => TextInput::make($field->field_name),
                 };
+
+                // Apply label and conditional required flag
+                $base = $base
+                    ->label($field->label)
+                    ->required($field->is_required);
+
+                $components[] = $base;
             }
         }
 

@@ -2,6 +2,7 @@
 
 namespace App\Models\Tenant;
 
+use Database\Seeders\tenant\CcFieldMappingsSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
@@ -11,6 +12,14 @@ class CcTeam extends Model
     use UsesTenantConnection;
 
     protected $fillable = ['name'];
+
+
+    protected static function booted(): void
+    {
+        static::created(function (CcTeam $team) {
+            CcFieldMappingsSeeder::seedForTeam($team->id);
+        });
+    }
 
     /**
      * Users belonging to this team.

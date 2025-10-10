@@ -4,13 +4,13 @@ namespace App\Filament\App\Resources\CcItems\Tables;
 
 use App\Models\Tenant\CcFieldMapping;
 use App\Models\Tenant\CcLookupValue;
-use App\Models\Tenant\CcTeam;
 use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Auth;
 
 class CcItemsTable
 {
@@ -59,7 +59,7 @@ class CcItemsTable
         ];
 
         // TEMP: use first team to simulate current context
-        $teamId = CcTeam::query()->value('id');
+        $teamId = Auth::user()?->current_team_id;
 
         if ($teamId) {
             $fieldMappings = CcFieldMapping::forTeam($teamId);

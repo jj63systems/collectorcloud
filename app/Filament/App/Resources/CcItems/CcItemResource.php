@@ -13,6 +13,9 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+
 
 class CcItemResource extends Resource
 {
@@ -37,6 +40,14 @@ class CcItemResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $teamId = Auth::user()?->current_team_id;
+
+        return parent::getEloquentQuery()
+            ->where('team_id', $teamId);
     }
 
     public static function getPages(): array

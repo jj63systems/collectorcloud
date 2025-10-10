@@ -21,6 +21,8 @@ return new class extends Migration {
             $table->boolean('is_team_scoped')->default(false)
                 ->comment('If true, lookup values are restricted per team via pivot');
 
+            $table->boolean('show_values_as_pill', 20)->default(false);
+
             $table->timestamps();
 
             $table->index(['parent_lookup_type_id']);
