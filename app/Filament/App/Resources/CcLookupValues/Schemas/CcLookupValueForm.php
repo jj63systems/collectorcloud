@@ -16,9 +16,9 @@ class CcLookupValueForm
     {
         return $schema->components([
 
-            // ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────
             // SECTION: Lookup Value Details
-            // ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────
             Section::make(mylabel('cc_lookup_values', 'sections.lookup_details', 'Lookup Value Details'))
                 ->description(mylabel('cc_lookup_values', 'sections.lookup_details_description',
                     'Define the lookup type, code, label, and basic attributes for this value.'))
@@ -58,6 +58,15 @@ class CcLookupValueForm
                             ->suffixIcon('heroicon-o-bars-3')
                             ->required(),
 
+                        // Colour
+                        Select::make('color')
+                            ->label(mylabel('cc_lookup_values', 'fields.color', 'Colour'))
+                            ->options(self::colorOptions())
+                            ->nullable()
+                            ->native(false)
+                            ->allowHtml()
+                            ->searchable(),
+
                         // Enabled toggle
                         Toggle::make('enabled')
                             ->label(mylabel('cc_lookup_values', 'fields.enabled', 'Enabled'))
@@ -67,9 +76,9 @@ class CcLookupValueForm
                     ]),
                 ]),
 
-            // ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────
             // SECTION: Team Assignment (conditionally visible)
-            // ─────────────────────────────────────────────────────
+            // ─────────────────────────────────────────────────────────
             Section::make(mylabel('cc_lookup_values', 'sections.team_assignment', 'Team Assignment'))
                 ->description(mylabel('cc_lookup_values', 'sections.team_assignment_description',
                     'Assign this value to one or more teams (for team-scoped lookup types only).'))
@@ -98,5 +107,31 @@ class CcLookupValueForm
         }
 
         return (bool) CcLookupType::whereKey($typeId)->value('is_team_scoped');
+    }
+
+    /**
+     * Theme colour options with colour dot previews.
+     */
+    protected static function colorOptions(): array
+    {
+        return [
+            'gray' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-gray-500"></span>Gray</div>',
+            'red' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-red-500"></span>Red</div>',
+            'orange' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-orange-500"></span>Orange</div>',
+            'amber' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-amber-500"></span>Amber</div>',
+            'lime' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-lime-500"></span>Lime</div>',
+            'green' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-green-500"></span>Green</div>',
+            'emerald' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-emerald-500"></span>Emerald</div>',
+            'teal' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-teal-500"></span>Teal</div>',
+            'cyan' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-cyan-500"></span>Cyan</div>',
+            'blue' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-blue-500"></span>Blue</div>',
+            'sky' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-sky-500"></span>Sky</div>',
+            'indigo' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-indigo-500"></span>Indigo</div>',
+            'purple' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-purple-500"></span>Purple</div>',
+            'pink' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-pink-500"></span>Pink</div>',
+            'rose' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-rose-500"></span>Rose</div>',
+            'slate' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-slate-500"></span>Slate</div>',
+            'zinc' => '<div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-zinc-500"></span>Zinc</div>',
+        ];
     }
 }

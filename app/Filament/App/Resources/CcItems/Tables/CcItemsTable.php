@@ -32,6 +32,14 @@ class CcItemsTable
                 ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
+
+//            TextColumn::make('test_color2')
+//                ->label('Test color2')
+//                ->badge()
+//                ->state(fn() => 'Oil Pressure')
+//                ->color('teal'),
+//
+
             TextColumn::make('accessioned_at')
                 ->label('Accessioned')
                 ->date('d/m/Y')
@@ -56,10 +64,11 @@ class CcItemsTable
         if ($teamId) {
             $fieldMappings = CcFieldMapping::forTeam($teamId);
 
-            // Preload all lookup values into a cache keyed by ID only
-            $lookupCache = CcLookupValue::query()
+            // Preload all lookup values with color and label
+            $lookupValues = CcLookupValue::query()
                 ->where('enabled', true)
-                ->pluck('label', 'id');
+                ->get()
+                ->keyBy('id');
 
             foreach ($fieldMappings as $field) {
                 $column = TextColumn::make($field->field_name)
@@ -80,15 +89,26 @@ class CcItemsTable
                         }
                     });
                 }
-
                 if ($field->data_type === 'LOOKUP') {
-                    $column->formatStateUsing(function ($state) use ($lookupCache) {
-                        if (!$state) {
-                            return null;
-                        }
+                    $column
+                        ->label($field->label)
+                        ->formatStateUsing(function ($record) use ($lookupValues, $field) {
+                            $value = $record->{$field->field_name};
+                            $lookup = $lookupValues[$value] ?? null;
 
-                        return $lookupCache[$state] ?? $state;
-                    });
+                            if (!$lookup) {
+                                return e($value);
+                            }
+
+                            $colorClass = $lookup->color ? 'fi-color-'.$lookup->color : 'fi-color-gray';
+
+                            return <<<HTML
+                                <span class="fi-badge {$colorClass}">
+                                    {$lookup->label}
+                                </span>
+                            HTML;
+                        })
+                        ->html();
                 }
 
                 $columns[] = $column;

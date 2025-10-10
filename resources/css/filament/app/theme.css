@@ -4,3 +4,93 @@
 @source '../../../../app/Filament';
 @source '../../../../resources/views/filament';
 @source '../../../../resources/views/components';
+
+
+@layer utilities {
+    /* Base badge style — pill shape, font size, spacing */
+    .fi-badge {
+        @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+        line-height: 1rem;
+    }
+
+    /* Color utility overrides with consistent white text and soft grey border */
+    .fi-color-red {
+        @apply bg-red-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-orange {
+        @apply bg-orange-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-amber {
+        @apply bg-amber-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-yellow {
+        @apply bg-yellow-500 text-black ring-1 ring-gray-300;
+    }
+
+    .fi-color-lime {
+        @apply bg-lime-500 text-black ring-1 ring-gray-300;
+    }
+
+    .fi-color-green {
+        @apply bg-green-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-emerald {
+        @apply bg-emerald-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-teal {
+        @apply bg-teal-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-cyan {
+        @apply bg-cyan-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-blue {
+        @apply bg-blue-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-indigo {
+        @apply bg-indigo-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-violet {
+        @apply bg-violet-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-purple {
+        @apply bg-purple-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-fuchsia {
+        @apply bg-fuchsia-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-pink {
+        @apply bg-pink-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-rose {
+        @apply bg-rose-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-gray {
+        @apply bg-gray-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-slate {
+        @apply bg-slate-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-zinc {
+        @apply bg-zinc-500 text-white ring-1 ring-gray-300;
+    }
+
+    .fi-color-neutral {
+        @apply bg-neutral-500 text-white ring-1 ring-gray-300;
+    }
+}

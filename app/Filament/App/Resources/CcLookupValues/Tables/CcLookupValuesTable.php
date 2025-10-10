@@ -4,6 +4,8 @@ namespace App\Filament\App\Resources\CcLookupValues\Tables;
 
 use Filament\Actions\EditAction;
 use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Table;
 
 class CcLookupValuesTable
@@ -17,18 +19,19 @@ class CcLookupValuesTable
             ->persistSortInSession()
             ->persistColumnSearchesInSession()
             ->persistSearchInSession()
-            ->filtersLayout(\Filament\Tables\Enums\FiltersLayout::AboveContent)
+            ->filtersLayout(FiltersLayout::AboveContent)
             ->columns([
-                Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->label('Id')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('type.name')
+
+                TextColumn::make('type.name')
                     ->label('Type')
                     ->sortable()
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('code')
+                TextColumn::make('code')
                     ->label('Code')
                     ->sortable()
                     ->searchable(),
@@ -45,7 +48,21 @@ class CcLookupValuesTable
                     ->sortable()
                     ->disabled(fn($record) => $record->system_flag),
 
-                Tables\Columns\TextColumn::make('teams.name')
+//                TextColumn::make('color')
+//                    ->label('Colour')
+//                    ->searchable()
+//                    ->disabled(fn($record) => $record->system_flag)
+//                    ->sortable(),
+
+                TextColumn::make('color')
+                    ->label('Colour')
+                    ->formatStateUsing(fn($state) => $state
+                        ? "<span class='w-3 h-3 rounded-full inline-block fi-color-{$state}'></span>"
+                        : '')
+                    ->alignCenter()
+                    ->html(),
+
+                TextColumn::make('teams.name')
                     ->label('Teams')
                     ->badge()
                     ->separator(', '),
@@ -72,4 +89,3 @@ class CcLookupValuesTable
             ]);
     }
 }
-

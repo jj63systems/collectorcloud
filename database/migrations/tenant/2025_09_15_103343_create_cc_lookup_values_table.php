@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->boolean('system_flag')->default(false)
                 ->comment('Protect system-defined values from edit/delete');
             $table->boolean('enabled')->default(true);
+            $table->string('color', 20)->nullable()->after('label');
+
             $table->timestamps();
 
             $table->unique(['type_id', 'code']);

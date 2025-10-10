@@ -22,6 +22,7 @@ class CcLookupValue extends Model
         'sort_order',
         'system_flag',
         'enabled',
+        'color',
     ];
 
     protected $casts = [
