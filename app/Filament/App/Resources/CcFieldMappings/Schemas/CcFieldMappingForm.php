@@ -57,6 +57,15 @@ class CcFieldMappingForm
                                 ->minValue(1)
                                 ->required(),
 
+                            Select::make('toggle_option')
+                                ->label('Toggle Option')
+                                ->options([
+                                    'notoggle' => 'No Toggle',
+                                    'toggle_shown' => 'Toggle - default shown',
+                                    'toggle_not_shown' => 'Toggle - default not shown',
+                                ])
+                                ->required(),
+
                             Toggle::make('is_required')
                                 ->label('Required'),
 

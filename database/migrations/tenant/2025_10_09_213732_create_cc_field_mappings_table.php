@@ -20,6 +20,7 @@ return new class () extends Migration {
             $table->integer('display_seq')->default(0);
             $table->boolean('is_required')->default(false);
             $table->boolean('is_searchable')->default(false);
+            $table->text('toggle_option')->default('notoggle');
 
             $table->timestamps();
 

@@ -25,6 +25,17 @@ class CcFieldMapping extends Model
         'display_seq',
         'is_required',
         'is_searchable',
+        'toggle_option'
+    ];
+
+    protected $casts = [
+        'toggle_option' => 'string',
+    ];
+
+    protected static array $validToggleOptions = [
+        'notoggle',
+        'toggle_shown',
+        'toggle_not_shown',
     ];
 
     public function team(): BelongsTo

@@ -32,14 +32,6 @@ class CcItemsTable
                 ->sortable()
                 ->toggleable(isToggledHiddenByDefault: true),
 
-
-//            TextColumn::make('test_color2')
-//                ->label('Test color2')
-//                ->badge()
-//                ->state(fn() => 'Oil Pressure')
-//                ->color('teal'),
-//
-
             TextColumn::make('accessioned_at')
                 ->label('Accessioned')
                 ->date('d/m/Y')
@@ -58,7 +50,6 @@ class CcItemsTable
                 ->toggleable(isToggledHiddenByDefault: true),
         ];
 
-        // TEMP: use first team to simulate current context
         $teamId = Auth::user()?->current_team_id;
 
         if ($teamId) {
@@ -73,9 +64,25 @@ class CcItemsTable
             foreach ($fieldMappings as $field) {
                 $column = TextColumn::make($field->field_name)
                     ->label($field->label)
-                    ->wrap()
-                    ->toggleable();
+                    ->wrap();
 
+                // --- Toggle handling based on field toggle_option ---
+                switch ($field->toggle_option) {
+                    case 'toggle_shown':
+                        $column->toggleable(isToggledHiddenByDefault: false);
+                        break;
+
+                    case 'toggle_not_shown':
+                        $column->toggleable(isToggledHiddenByDefault: true);
+                        break;
+
+                    case 'notoggle':
+                    default:
+                        // Do not apply toggleable — always shown
+                        break;
+                }
+
+                // --- DATE formatting ---
                 if ($field->data_type === 'DATE') {
                     $column->formatStateUsing(function ($state) {
                         if (!$state) {
@@ -89,9 +96,10 @@ class CcItemsTable
                         }
                     });
                 }
+
+                // --- LOOKUP rendering with colored badge ---
                 if ($field->data_type === 'LOOKUP') {
                     $column
-                        ->label($field->label)
                         ->formatStateUsing(function ($record) use ($lookupValues, $field) {
                             $value = $record->{$field->field_name};
                             $lookup = $lookupValues[$value] ?? null;
@@ -127,3 +135,4 @@ class CcItemsTable
             ]);
     }
 }
+

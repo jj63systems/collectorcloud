@@ -52,6 +52,9 @@ class CcFieldMappingsTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: false),
 
+                TextColumn::make('toggle_option')
+                    ->label('Toggle'),
+
                 TextInputColumn::make('display_seq')
                     ->label('Seq')
                     ->rules(['nullable', 'integer', 'min:1'])
