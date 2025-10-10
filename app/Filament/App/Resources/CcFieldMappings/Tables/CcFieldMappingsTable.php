@@ -2,7 +2,6 @@
 
 namespace App\Filament\App\Resources\CcFieldMappings\Tables;
 
-use App\Models\Tenant\CcLookupType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -48,12 +47,8 @@ class CcFieldMappingsTable
                     ->rules(['nullable', 'integer', 'min:1'])
                     ->sortable(),
 
-                SelectColumn::make('lookup_type_id')
+                TextColumn::make('type.name')
                     ->label('Lookup Type')
-                    ->options(fn() => CcLookupType::pluck('name', 'id')
-                        ->toArray()
-                    )
-                    ->searchableOptions()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: false),
 

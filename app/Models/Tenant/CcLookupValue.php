@@ -78,4 +78,6 @@ class CcLookupValue extends Model
             ->useLogName('Lookup Values')
             ->logOnlyDirty();
     }
+
+
 }

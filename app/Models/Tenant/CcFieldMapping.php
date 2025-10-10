@@ -37,6 +37,11 @@ class CcFieldMapping extends Model
         return $this->belongsTo(CcLookupType::class, 'lookup_type_id');
     }
 
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(CcLookupType::class, 'lookup_type_id');
+    }
+
     public static function forTeam(int $teamId)
     {
         return self::query()
@@ -46,5 +51,5 @@ class CcFieldMapping extends Model
             ->get();
     }
 
-    
+
 }
