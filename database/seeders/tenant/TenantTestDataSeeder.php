@@ -68,5 +68,10 @@ class TenantTestDataSeeder extends Seeder
         } else {
             \Log::warning("Superuser role not found when seeding {$user->email}");
         }
+
+
+        $this->call(TestItemSeeder::class);
+
     }
+
 }

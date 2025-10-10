@@ -34,5 +34,7 @@ class TenantDatabaseSeeder extends Seeder
         // Seed permissions
         $this->call(PermissionAndRoleSeeder::class);
 
+        $this->call(CcFieldMappingsSeeder::class);
+
     }
 }
