@@ -2,9 +2,11 @@
 
 namespace App\Filament\App\Resources\CcFieldMappings\Tables;
 
+use App\Models\Tenant\CcLookupType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\SelectColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\TextInputColumn;
 use Filament\Tables\Columns\ToggleColumn;
@@ -26,30 +28,39 @@ class CcFieldMappingsTable
                     ->sortable()
                     ->searchable(),
 
-
-                TextInputColumn::make('display_seq')
-                    ->label('Seq')
-                    ->sortable(),
-
                 TextInputColumn::make('label')
                     ->label('Label')
-                    ->sortable(),
+                    ->sortable()
+                    ->rules(['nullable', 'string', 'max:255']),
 
-
-                TextColumn::make('data_type')
+                SelectColumn::make('data_type')
                     ->label('Type')
+                    ->options([
+                        'TEXT' => 'Text',
+                        'NUMBER' => 'Number',
+                        'DATE' => 'Date',
+                        'LOOKUP' => 'Lookup',
+                    ])
                     ->sortable(),
 
-                TextColumn::make('max_length')
+                TextInputColumn::make('max_length')
                     ->label('Max Len')
-                    ->numeric()
+                    ->rules(['nullable', 'integer', 'min:1'])
                     ->sortable(),
 
-                TextColumn::make('lookup_type.name')
+                SelectColumn::make('lookup_type_id')
                     ->label('Lookup Type')
+                    ->options(fn() => CcLookupType::pluck('name', 'id')
+                        ->toArray()
+                    )
+                    ->searchableOptions()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: false),
 
+                TextInputColumn::make('display_seq')
+                    ->label('Seq')
+                    ->rules(['nullable', 'integer', 'min:1'])
+                    ->sortable(),
 
                 ToggleColumn::make('is_required')
                     ->label('Required')

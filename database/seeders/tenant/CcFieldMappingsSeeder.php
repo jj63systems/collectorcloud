@@ -31,7 +31,7 @@ class CcFieldMappingsSeeder extends Seeder
                     'data_type' => 'TEXT',
                     'max_length' => null,
                     'lookup_type_id' => null,
-                    'display_seq' => $i,
+                    'display_seq' => $i * 10,
                     'is_required' => false,
                     'is_searchable' => false,
                     'created_at' => now(),

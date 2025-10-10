@@ -71,6 +71,7 @@ class TenantTestDataSeeder extends Seeder
 
 
         $this->call(TestItemSeeder::class);
+        $this->call(TestLookupSeeder::class);
 
     }
 

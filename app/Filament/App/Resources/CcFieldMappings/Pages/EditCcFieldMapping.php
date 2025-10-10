@@ -3,7 +3,6 @@
 namespace App\Filament\App\Resources\CcFieldMappings\Pages;
 
 use App\Filament\App\Resources\CcFieldMappings\CcFieldMappingResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCcFieldMapping extends EditRecord
@@ -13,7 +12,12 @@ class EditCcFieldMapping extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            DeleteAction::make(),
+//            DeleteAction::make(),
         ];
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
     }
 }
