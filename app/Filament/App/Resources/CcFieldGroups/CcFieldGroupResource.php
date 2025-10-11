@@ -46,7 +46,7 @@ class CcFieldGroupResource extends Resource
     protected static ?string $pluralLabel = 'Field Groups';  // Plural
 
     // ✅ Optional custom navigation sort
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 105;
 
     // END TITLES AND NAV SETTINGS ----------------------------
 

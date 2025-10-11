@@ -48,7 +48,7 @@ class CcLabelOverrideResource extends Resource
     protected static ?string $pluralLabel = 'Texts';  // Plural
 
     // ✅ Optional custom navigation sort
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 115;
 
     // END TITLES AND NAV SETTINGS ----------------------------
 

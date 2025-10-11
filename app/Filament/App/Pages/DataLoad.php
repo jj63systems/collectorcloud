@@ -60,7 +60,7 @@ class DataLoad extends Page implements HasForms
     protected static ?string $pluralLabel = 'Texts';  // Plural
 
     // ✅ Optional custom navigation sort
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 50;
 
     // END TITLES AND NAV SETTINGS ----------------------------
 
