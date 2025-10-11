@@ -37,7 +37,18 @@ class CcLookupSeeder extends Seeder
                 ],
             ],
 
+            [
+                'code' => 'YES_NO',
+                'name' => 'Yes/No',
+                'is_team_scoped' => false,
+                'values' => [
+                    'YES' => 'Yes',
+                    'NO' => 'No',
+                ],
+            ],
+
             // ─────────── ITEM CATEGORIES (example) ───────────
+
             [
                 'code' => 'ITEM_TYPE',
                 'name' => 'Item Type',

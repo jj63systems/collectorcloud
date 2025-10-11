@@ -66,6 +66,12 @@ class CcFieldMappingForm
                                 ])
                                 ->required(),
 
+                            Toggle::make('is_filterable')
+                                ->label('Use in filter'),
+
+                            Toggle::make('is_sortable')
+                                ->label('Sortable'),
+
                             Toggle::make('is_required')
                                 ->label('Required'),
 

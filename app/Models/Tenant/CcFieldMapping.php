@@ -25,6 +25,8 @@ class CcFieldMapping extends Model
         'display_seq',
         'is_required',
         'is_searchable',
+        'is_filterable',
+        'is_sortable',
         'toggle_option'
     ];
 
