@@ -13,6 +13,7 @@ return new class extends Migration {
                 ->constrained('cc_teams')
                 ->onDelete('cascade');
             $table->string('name');
+            $table->boolean('is_protected')->default(false);
             $table->integer('display_seq')->default(0);
             $table->timestamps();
         });

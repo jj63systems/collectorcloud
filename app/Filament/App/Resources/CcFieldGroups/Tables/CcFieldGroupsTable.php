@@ -4,6 +4,7 @@ namespace App\Filament\App\Resources\CcFieldGroups\Tables;
 
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -27,6 +28,11 @@ class CcFieldGroupsTable
                 TextColumn::make('display_seq')
                     ->label('Sequence')
                     ->sortable()
+                    ->toggleable(),
+
+                IconColumn::make('is_protected')
+                    ->label('Protected')
+                    ->boolean()
                     ->toggleable(),
 
                 TextColumn::make('updated_at')

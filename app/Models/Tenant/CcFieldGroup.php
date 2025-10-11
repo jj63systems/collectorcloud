@@ -15,6 +15,7 @@ class CcFieldGroup extends Model
     protected $fillable = [
         'name',
         'display_seq',
+        'is_protected',
     ];
 
     public function fieldMappings(): HasMany
