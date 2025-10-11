@@ -38,6 +38,15 @@ class CcFieldMappingsTable
                     ->rules(['nullable', 'integer', 'min:1'])
                     ->sortable(),
 
+
+                TextColumn::make('group.name')
+                    ->label('Field Group')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable()
+                    ->formatStateUsing(fn($state) => $state ?: '—')
+                    ->placeholder('—'),
+
 //                SelectColumn::make('data_type')
 //                    ->label('Type')
 //                    ->options([

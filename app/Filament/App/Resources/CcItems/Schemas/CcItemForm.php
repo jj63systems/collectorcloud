@@ -2,11 +2,15 @@
 
 namespace App\Filament\App\Resources\CcItems\Schemas;
 
+use App\Models\Tenant\CcFieldGroup;
 use App\Models\Tenant\CcFieldMapping;
+use App\Models\Tenant\CcLookupValue;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,60 +18,94 @@ class CcItemForm
 {
     public static function configure(Schema $schema): Schema
     {
-        $components = [
-            TextInput::make('name')
-                ->label('Item Name')
-                ->required()
-                ->maxLength(20),
+        $components = [];
 
-            Textarea::make('description')
-                ->label('Description')
-                ->rows(3)
-                ->maxLength(500),
-        ];
+        // Standard fields section
+        $components[] = Section::make('Item Details')
+            ->schema([
+                TextInput::make('name')
+                    ->label('Item Name')
+                    ->required()
+                    ->maxLength(20),
 
-        // TEMP: Use first team
+                Textarea::make('description')
+                    ->label('Description')
+                    ->rows(3)
+                    ->maxLength(500),
+            ])
+            ->columns(1)
+            ->collapsible();
+
         $teamId = Auth::user()?->current_team_id;
 
         if ($teamId) {
-            $fieldMappings = CcFieldMapping::forTeam($teamId);
+            $fieldMappings = CcFieldMapping::query()
+                ->where('team_id', $teamId)
+                ->whereNotNull('label')
+                ->orderBy('display_seq')
+                ->get();
 
-            foreach ($fieldMappings as $field) {
-                $base = match ($field->data_type) {
-                    'TEXT' => TextInput::make($field->field_name)
-                        ->maxLength($field->max_length ?? 255),
+            $grouped = $fieldMappings
+                ->groupBy(fn($field) => $field->field_group_id ?? 'ungrouped')
+                ->sortBy(function ($fields, $groupId) {
+                    if ($groupId === 'ungrouped') {
+                        return PHP_INT_MAX;
+                    }
+                    return CcFieldGroup::find($groupId)?->display_seq ?? PHP_INT_MAX;
+                });
 
-                    'NUMBER' => TextInput::make($field->field_name)
-                        ->numeric(),
+            foreach ($grouped as $groupId => $fields) {
+                $fieldComponents = [];
 
-                    'DATE' => DatePicker::make($field->field_name),
+                foreach ($fields->sortBy('display_seq') as $field) {
+                    $component = match ($field->data_type) {
+                        'TEXT' => TextInput::make($field->field_name)
+                            ->maxLength($field->max_length ?? 255),
 
-                    'LOOKUP' => Select::make($field->field_name)
-                        ->options(function () use ($field) {
-                            if (!$field->lookup_type_id) {
-                                return [];
-                            }
+                        'NUMBER' => TextInput::make($field->field_name)
+                            ->numeric(),
 
-                            return \App\Models\Tenant\CcLookupValue::query()
-                                ->where('type_id', $field->lookup_type_id)
-                                ->where('enabled', true)
-                                ->orderBy('sort_order')
-                                ->pluck('label', 'id')
-                                ->toArray();
-                        }),
+                        'DATE' => DatePicker::make($field->field_name),
 
-                    default => TextInput::make($field->field_name),
-                };
+                        'LOOKUP' => Select::make($field->field_name)
+                            ->options(function () use ($field) {
+                                if (!$field->lookup_type_id) {
+                                    return [];
+                                }
 
-                // Apply label and conditional required flag
-                $base = $base
-                    ->label($field->label)
-                    ->required($field->is_required);
+                                return CcLookupValue::query()
+                                    ->where('type_id', $field->lookup_type_id)
+                                    ->where('enabled', true)
+                                    ->orderBy('sort_order')
+                                    ->pluck('label', 'id')
+                                    ->toArray();
+                            }),
 
-                $components[] = $base;
+                        default => TextInput::make($field->field_name),
+                    };
+
+                    $component = $component
+                        ->label($field->label)
+                        ->required($field->is_required);
+
+                    $fieldComponents[] = $component;
+                }
+
+                $groupLabel = $groupId !== 'ungrouped'
+                    ? (CcFieldGroup::find($groupId)?->name ?? 'Fields')
+                    : 'Other Fields';
+
+                $components[] = Section::make($groupLabel)
+                    ->schema($fieldComponents)
+                    ->columns(1)
+                    ->collapsible();
             }
         }
 
-        return $schema->components($components);
+        return $schema->components([
+            Group::make()
+                ->schema($components)
+                ->columns(1),
+        ]);
     }
 }

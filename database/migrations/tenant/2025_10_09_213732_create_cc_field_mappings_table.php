@@ -26,6 +26,12 @@ return new class () extends Migration {
 
             $table->timestamps();
 
+            $table->foreignId('field_group_id')
+                ->nullable()
+                ->constrained('cc_field_groups')
+                ->nullOnDelete()
+                ->after('team_id');
+
             $table->unique(['team_id', 'field_name'], 'uniq_team_field'); // one mapping per team per field
 
             // Optional FK constraint

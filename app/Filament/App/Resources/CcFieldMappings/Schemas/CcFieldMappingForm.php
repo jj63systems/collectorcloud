@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Resources\CcFieldMappings\Schemas;
 
+use App\Models\Tenant\CcFieldGroup;
 use App\Models\Tenant\CcLookupType;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -9,10 +10,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-
-// ✅ use Group instead of Grid
-
-// optional, for nice grouping
+use Illuminate\Support\Facades\Auth;
 
 class CcFieldMappingForm
 {
@@ -24,9 +22,26 @@ class CcFieldMappingForm
                     Group::make()
                         ->columns(2)
                         ->schema([
+                            // Group
+                            Select::make('field_group_id')
+                                ->label('Field Group')
+                                ->options(function () {
+                                    $teamId = Auth::user()?->current_team_id;
+
+                                    return CcFieldGroup::query()
+                                        ->where('team_id', $teamId)
+                                        ->orderBy('display_seq')
+                                        ->pluck('name', 'id');
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->nullable()
+                                ->helperText('Select the group this field belongs to.'),
+
                             TextInput::make('label')
                                 ->label('Label')
-                                ->maxLength(255),
+                                ->maxLength(255)
+                                ->required(),
 
                             Select::make('data_type')
                                 ->label('Type')

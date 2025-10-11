@@ -2,12 +2,9 @@
 
 namespace App\Models\Tenant;
 
-namespace App\Models\Tenant;
-
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
-
 
 class CcFieldMapping extends Model
 {
@@ -17,6 +14,7 @@ class CcFieldMapping extends Model
 
     protected $fillable = [
         'team_id',
+        'field_group_id',
         'field_name',
         'label',
         'data_type',
@@ -27,10 +25,14 @@ class CcFieldMapping extends Model
         'is_searchable',
         'is_filterable',
         'is_sortable',
-        'toggle_option'
+        'toggle_option',
     ];
 
     protected $casts = [
+        'is_required' => 'boolean',
+        'is_searchable' => 'boolean',
+        'is_filterable' => 'boolean',
+        'is_sortable' => 'boolean',
         'toggle_option' => 'string',
     ];
 
@@ -39,6 +41,10 @@ class CcFieldMapping extends Model
         'toggle_shown',
         'toggle_not_shown',
     ];
+
+    // ────────────────────────────────────────────────
+    // RELATIONSHIPS
+    // ────────────────────────────────────────────────
 
     public function team(): BelongsTo
     {
@@ -55,6 +61,15 @@ class CcFieldMapping extends Model
         return $this->belongsTo(CcLookupType::class, 'lookup_type_id');
     }
 
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(CcFieldGroup::class, 'field_group_id');
+    }
+
+    // ────────────────────────────────────────────────
+    // SCOPES
+    // ────────────────────────────────────────────────
+
     public static function forTeam(int $teamId)
     {
         return self::query()
@@ -63,6 +78,4 @@ class CcFieldMapping extends Model
             ->orderBy('display_seq')
             ->get();
     }
-
-
 }

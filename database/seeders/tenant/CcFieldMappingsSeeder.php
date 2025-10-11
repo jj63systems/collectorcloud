@@ -2,6 +2,7 @@
 
 namespace Database\Seeders\Tenant;
 
+use App\Models\Tenant\CcFieldGroup;
 use App\Models\Tenant\CcFieldMapping;
 use App\Models\Tenant\CcTeam;
 use Illuminate\Database\Seeder;
@@ -19,19 +20,12 @@ class CcFieldMappingsSeeder extends Seeder
         }
 
         foreach ($teams as $team) {
-            self::seedForTeam($team->id, true); // true = verbose output when seeding
+            self::seedForTeam($team->id, true); // true = verbose
         }
 
         $this->command?->info('✅ CcFieldMappingsSeeder completed.');
     }
 
-    /**
-     * Seed 100 default field mappings for a specific team.
-     *
-     * This method can be called from:
-     *  - The seeder itself (as above)
-     *  - Runtime logic (e.g., Field Mappings screen)
-     */
     public static function seedForTeam(int $teamId, bool $logToConsole = false): void
     {
         if (CcFieldMapping::where('team_id', $teamId)->exists()) {
@@ -40,6 +34,13 @@ class CcFieldMappingsSeeder extends Seeder
             }
             return;
         }
+
+        // Create a single default field group for this team
+        $fieldGroup = CcFieldGroup::create([
+            'team_id' => $teamId,
+            'name' => 'Default Group',
+            'display_seq' => 10,
+        ]);
 
         $rows = [];
         for ($i = 1; $i <= 100; $i++) {
@@ -52,9 +53,13 @@ class CcFieldMappingsSeeder extends Seeder
                 'data_type' => 'TEXT',
                 'max_length' => null,
                 'lookup_type_id' => null,
+                'field_group_id' => $fieldGroup->id,
                 'display_seq' => $i * 10,
                 'is_required' => false,
                 'is_searchable' => false,
+                'is_filterable' => false,
+                'is_sortable' => false,
+                'toggle_option' => 'notoggle',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -63,7 +68,7 @@ class CcFieldMappingsSeeder extends Seeder
         CcFieldMapping::insert($rows);
 
         if ($logToConsole) {
-            Log::info("✅ Seeded 100 field mappings for team ID {$teamId}.");
+            Log::info("✅ Seeded 100 field mappings (Default Group ID {$fieldGroup->id}) for team ID {$teamId}.");
         }
     }
 }

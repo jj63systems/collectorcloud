@@ -7,7 +7,6 @@ use App\Models\Tenant\CcItem;
 use App\Models\Tenant\CcLookupValue;
 use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -164,7 +163,7 @@ class CcItemsTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+//                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
