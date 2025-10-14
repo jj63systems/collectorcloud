@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Multitenancy\Models\Concerns\UsesTenantConnection;
 
-
 class CcItem extends Model
 {
     use UsesTenantConnection;
@@ -14,12 +13,27 @@ class CcItem extends Model
     protected $table = 'cc_items';
 
     protected $fillable = [
+        // --- Core fields ---
         'team_id',
+        'name',
+        'item_key',
+        'description',
+        'filing_reference',
+        'condition_notes',
+        'curation_notes',
+        'date_received',
         'accessioned_at',
         'accessioned_by',
-        'description',
-        'name',
-        // f001 to f100
+        'checked_by_user_id',
+        'donation_id',
+        'location_id',
+        'disposed',
+        'disposed_date',
+        'disposed_notes',
+        'inventory_status',
+        'is_public',
+
+        // --- Dynamic fields (f001–f100 for now) ---
         'f001', 'f002', 'f003', 'f004', 'f005', 'f006', 'f007', 'f008', 'f009', 'f010',
         'f011', 'f012', 'f013', 'f014', 'f015', 'f016', 'f017', 'f018', 'f019', 'f020',
         'f021', 'f022', 'f023', 'f024', 'f025', 'f026', 'f027', 'f028', 'f029', 'f030',
@@ -34,15 +48,36 @@ class CcItem extends Model
 
     protected $casts = [
         'accessioned_at' => 'date',
+        'date_received' => 'date',
+        'disposed_date' => 'date',
+        'disposed' => 'boolean',
+        'is_public' => 'boolean',
     ];
+
+    // --- Relationships ---
 
     public function team(): BelongsTo
     {
         return $this->belongsTo(CcTeam::class);
     }
 
-    public function user(): BelongsTo
+    public function donation(): BelongsTo
+    {
+        return $this->belongsTo(CcDonation::class, 'donation_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(CcLocation::class, 'location_id');
+    }
+
+    public function accessionedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'accessioned_by');
+    }
+
+    public function checkedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'checked_by_user_id');
     }
 }

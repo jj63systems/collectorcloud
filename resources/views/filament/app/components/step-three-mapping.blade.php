@@ -1,5 +1,16 @@
-<div class="space-y-6">
+<div
+    x-data="{
+        selected: {},
+        options: @js($availableSpreadsheetHeaders),
 
+        isDisabled(option, currentKey) {
+            return Object.entries(this.selected)
+                .filter(([key, val]) => key !== currentKey)
+                .some(([key, val]) => val === option);
+        }
+    }"
+    class="space-y-6"
+>
     @foreach ($structuredEntities ?? [] as $entityName => $fields)
         <x-filament::section>
             <x-slot name="heading">
@@ -15,14 +26,27 @@
                         </td>
                         <td class="py-2">
                             <select
+                                x-model="selected['{{ $fieldKey }}']"
+                                name="structuredFieldMappings[{{ $fieldKey }}]"
                                 wire:model.defer="structuredFieldMappings.{{ $fieldKey }}"
                                 class="w-full rounded-md border-gray-300 shadow-sm focus:ring-primary-500 focus:border-primary-500 text-sm"
                             >
                                 <option value="">-- Select column --</option>
                                 @foreach ($availableSpreadsheetHeaders ?? [] as $header)
-                                    <option value="{{ $header }}">{{ $header }}</option>
+                                    <option
+                                        value="{{ $header }}"
+                                        x-bind:disabled="isDisabled('{{ $header }}', '{{ $fieldKey }}')"
+                                    >
+                                        {{ $header }}
+                                    </option>
                                 @endforeach
                             </select>
+
+                            {{-- Hidden input to sync with Livewire --}}
+                            <input type="hidden"
+                                   name="structuredFieldMappings[{{ $fieldKey }}]"
+                                   :value="selected['{{ $fieldKey }}'] ?? ''"
+                                   wire:model.defer="structuredFieldMappings.{{ $fieldKey }}"/>
                         </td>
                     </tr>
                 @endforeach
@@ -30,5 +54,4 @@
             </table>
         </x-filament::section>
     @endforeach
-
 </div>
