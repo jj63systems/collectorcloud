@@ -17,6 +17,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Component as LivewireComponent;
@@ -110,6 +111,8 @@ class DataLoad extends Page implements HasForms
     {
         return [
             Wizard::make([
+
+                // STEP 1 — Upload spreadsheet
                 Step::make('Data attachment')
                     ->schema([
                         FileUpload::make('attachment')
@@ -126,21 +129,19 @@ class DataLoad extends Page implements HasForms
                             ->view('filament.app.components.sheet-message')
                             ->visible(fn() => count($this->sheetNames) === 1),
 
-
                         Section::make('Worksheet Selection')
                             ->schema([
                                 Radio::make('formData.sheetName')
                                     ->label('Select worksheet')
-                                    ->options(fn() => collect($this->sheetNames)->mapWithKeys(fn($name
-                                    ) => [$name => $name])->toArray())
+                                    ->options(fn() => collect($this->sheetNames)
+                                        ->mapWithKeys(fn($name) => [$name => $name])
+                                        ->toArray())
                                     ->required(),
                             ])
                             ->visible(fn() => count($this->sheetNames) > 1)
                             ->extraAttributes([
                                 'class' => 'bg-gray-50 rounded-md p-4 border border-gray-200',
-                            ])
-
-
+                            ]),
                     ])
                     ->afterValidation(function (LivewireComponent $livewire, Get $get) {
                         $livewire->data = [
@@ -156,17 +157,19 @@ class DataLoad extends Page implements HasForms
                             ->send();
 
                         $livewire->js(<<<'JS'
-                                        setTimeout(() => {
-                                            const wizard = document.querySelector('[data-id^="wizard-"]');
-                                            if (wizard) {
-                                                const nextBtn = wizard.querySelector('button[title="Next step"]');
-                                                if (nextBtn) nextBtn.click();
-                                            }
-                                            window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
-                                        }, 500);
-                                    JS
+                        setTimeout(() => {
+                            const wizard = document.querySelector('[data-id^="wizard-"]');
+                            if (wizard) {
+                                const nextBtn = wizard.querySelector('button[title="Next step"]');
+                                if (nextBtn) nextBtn.click();
+                            }
+                            window.Livewire.find($wire.__instance.id).call('processUploadAndAnalyse');
+                        }, 500);
+                    JS
                         );
                     }),
+
+                // STEP 2 — Review OpenAI analysis
                 Step::make('Review')
                     ->schema([
                         TextEntry::make('selectedSheet')
@@ -184,27 +187,47 @@ class DataLoad extends Page implements HasForms
                                 'validationIssues' => $this->validationIssues,
                                 'entities' => $this->entities,
                                 'rowsAnalysed' => $this->rowsAnalysed,
-
                             ])
                             ->visible(fn() => $this->data['status'] === 'complete'),
-
 
                         TextEntry::make('data.analysis_loader')
                             ->state('⏳ Analysing file, please wait...')
                             ->visible(fn() => $this->data['status'] !== 'complete')
-                            ->extraAttributes(['class' => 'animate-pulse bg-gray-100 rounded-md p-2 mb-4 text-sm'])
+                            ->extraAttributes([
+                                'class' => 'animate-pulse bg-gray-100 rounded-md p-2 mb-4 text-sm',
+                            ])
                             ->html(),
                     ]),
-                Step::make('Map Columns')
+
+                // STEP 3 — Map known fields
+                Step::make('Map known fields')
                     ->schema([
-                        ViewField::make('mapping_placeholder')
+                        ViewField::make('mapping_known')
                             ->view('filament.app.components.step-three-mapping', [
                                 'availableSpreadsheetHeaders' => $this->availableSpreadsheetHeaders,
                                 'structuredEntities' => $this->getStructuredFieldsForSelectedEntities(),
                             ])
                             ->visible(fn() => filled($this->selectedEntities)),
                     ]),
-            ])->submitAction(Action::make('submit')->label('Submit')->action('submit')),
+
+                // STEP 4 — Assign remaining columns to fxxx or ignore
+                Step::make('Assign remaining columns')
+                    ->schema([
+                        ViewField::make('step_four_fxxx')
+                            ->view('filament.app.components.step-four-fxxx-mapping', [
+                                'unmappedSpreadsheetHeaders' => $this->getUnmappedSpreadsheetHeaders(),
+                                'mappedSpreadsheetHeaders' => $this->getMappedSpreadsheetHeaders(),
+                                'mappedSpreadsheetHeadersByEntity' => $this->getConfirmedMappingsByEntity(),
+                                'fieldLabels' => $this->getStructuredFieldsForSelectedEntities(),
+                            ])
+                            ->visible(fn() => filled($this->availableSpreadsheetHeaders)),
+                    ]),
+            ])
+                ->submitAction(
+                    Action::make('submit')
+                        ->label('Submit')
+                        ->action('submit')
+                ),
         ];
     }
 
@@ -542,49 +565,139 @@ PROMPT;
     protected function getStructuredFieldsByEntity(): array
     {
         return [
-            'LOCATIONS' => [
-                'cc_locations.name' => ['label' => 'Name', 'type' => 'string'],
-                'cc_locations.type' => ['label' => 'Type', 'type' => 'string'],
-                'cc_locations.comments' => ['label' => 'Comments', 'type' => 'text'],
-            ],
+
             'DONORS' => [
                 'cc_donors.name' => ['label' => 'Name', 'type' => 'string'],
+                'cc_donors.email' => ['label' => 'Email', 'type' => 'string'],
+                'cc_donors.telephone' => ['label' => 'Telephone', 'type' => 'string'],
                 'cc_donors.address_line_1' => ['label' => 'Address Line 1', 'type' => 'string'],
                 'cc_donors.address_line_2' => ['label' => 'Address Line 2', 'type' => 'string'],
                 'cc_donors.city' => ['label' => 'City', 'type' => 'string'],
                 'cc_donors.county' => ['label' => 'County', 'type' => 'string'],
                 'cc_donors.postcode' => ['label' => 'Postcode', 'type' => 'string'],
                 'cc_donors.country' => ['label' => 'Country', 'type' => 'string'],
-                'cc_donors.telephone' => ['label' => 'Telephone', 'type' => 'string'],
-                'cc_donors.address_old' => ['label' => 'Address Old', 'type' => 'text'],
-                'cc_donors.email' => ['label' => 'Email', 'type' => 'string'],
+                'cc_donors.address_old' => ['label' => 'Legacy Address', 'type' => 'text'],
             ],
+
             'DONATIONS' => [
-                'cc_donations.donor_id' => ['label' => 'Donor Id', 'type' => 'string'],
+//                'cc_donations.donor_id' => ['label' => 'Donor', 'type' => 'foreign'],
+                'cc_donations.donation_name' => ['label' => 'Donation Name', 'type' => 'string'],
                 'cc_donations.date_received' => ['label' => 'Date Received', 'type' => 'date'],
                 'cc_donations.donation_basis' => ['label' => 'Donation Basis', 'type' => 'string'],
-                'cc_donations.donation_name' => ['label' => 'Donation Name', 'type' => 'string'],
                 'cc_donations.comments' => ['label' => 'Comments', 'type' => 'text'],
-                'cc_donations.donation_basis_old' => ['label' => 'Donation Basis Old', 'type' => 'text'],
-                'cc_donations.accessioned_by' => ['label' => 'Accessioned By', 'type' => 'string'],
-                'cc_donations.accessioned_by_old' => ['label' => 'Accessioned By Old', 'type' => 'text'],
-                'cc_donations.donor_key_old' => ['label' => 'Donor Key Old', 'type' => 'string'],
-                'cc_donations.year_received_old' => ['label' => 'Year Received Old', 'type' => 'string'],
+                'cc_donations.accessioned_by' => ['label' => 'Accessioned By (User ID)', 'type' => 'foreign'],
+//                'cc_donations.donation_basis_old' => ['label' => 'Legacy Basis', 'type' => 'string'],
+//                'cc_donations.accessioned_by_old' => ['label' => 'Legacy Accessioned By', 'type' => 'string'],
+//                'cc_donations.donor_key_old' => ['label' => 'Legacy Donor Key', 'type' => 'string'],
+//                'cc_donations.year_received_old' => ['label' => 'Legacy Year Received', 'type' => 'string'],
             ],
+
             'ITEMS' => [
-                'cc_items.donation_id' => ['label' => 'Donation Id', 'type' => 'string'],
-                'cc_items.item_key' => ['label' => 'Item Key', 'type' => 'string'],
-                'cc_items.item_type' => ['label' => 'Item Type', 'type' => 'string'],
+                'cc_items.name' => ['label' => 'Item Name', 'type' => 'string'],
                 'cc_items.description' => ['label' => 'Description', 'type' => 'text'],
-                'cc_items.location_id' => ['label' => 'Location Id', 'type' => 'string'],
-                'cc_items.condition_notes' => ['label' => 'Condition Notes', 'type' => 'text'],
-                'cc_items.disposed' => ['label' => 'Disposed', 'type' => 'boolean'],
-                'cc_items.disposed_notes' => ['label' => 'Disposed Notes', 'type' => 'text'],
-                'cc_items.disposed_date' => ['label' => 'Disposed Date', 'type' => 'date'],
-                'cc_items.filing_reference' => ['label' => 'Filing Reference', 'type' => 'text'],
+//                'cc_items.donation_id' => ['label' => 'Donation', 'type' => 'foreign'],
                 'cc_items.date_received' => ['label' => 'Date Received', 'type' => 'date'],
-                'cc_items.checked_by_user_id' => ['label' => 'Checked By User Id', 'type' => 'string'],
+//                'cc_items.accessioned_at' => ['label' => 'Accessioned At', 'type' => 'date'],
+//                'cc_items.accessioned_by' => ['label' => 'Accessioned By (User ID)', 'type' => 'foreign'],
+//                'cc_items.filing_reference' => ['label' => 'Filing Reference', 'type' => 'string'],
+//                'cc_items.condition_notes' => ['label' => 'Condition Notes', 'type' => 'text'],
+//                'cc_items.curation_notes' => ['label' => 'Curation Notes', 'type' => 'text'],
+//                'cc_items.disposed' => ['label' => 'Disposed', 'type' => 'boolean'],
+//                'cc_items.disposed_date' => ['label' => 'Disposed Date', 'type' => 'date'],
+//                'cc_items.disposed_notes' => ['label' => 'Disposed Notes', 'type' => 'text'],
+//                'cc_items.inventory_status' => ['label' => 'Inventory Status', 'type' => 'string'],
+//                'cc_items.is_public' => ['label' => 'Is Public', 'type' => 'boolean'],
+            ],
+
+            'LOCATIONS' => [
+                'cc_locations.name' => ['label' => 'Location Name', 'type' => 'string'],
+//                'cc_locations.parent_id' => ['label' => 'Parent Location', 'type' => 'foreign'],
+//                'cc_locations.type_id' => ['label' => 'Location Type', 'type' => 'foreign'],
+//                'cc_locations.depth' => ['label' => 'Depth', 'type' => 'integer'],
+//                'cc_locations.path' => ['label' => 'Path', 'type' => 'string'],
             ],
         ];
+    }
+
+    protected function getUnmappedSpreadsheetHeaders(): array
+    {
+        $allHeaders = $this->availableSpreadsheetHeaders ?? [];
+
+        // Flatten all used values from structured mappings (e.g. 'Title', 'Description', etc.)
+        $usedHeaders = collect($this->structuredFieldMappings ?? [])
+            ->flatMap(fn($mappings) => array_values($mappings))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return array_values(array_filter(
+            $allHeaders,
+            fn($header) => !in_array($header, $usedHeaders, true)
+        ));
+    }
+
+    protected function getMappedSpreadsheetHeaders(): array
+    {
+        return array_values(array_filter($this->structuredFieldMappings ?? []));
+    }
+
+
+    protected function getConfirmedMappingsByEntity(): array
+        //
+        // THIS ONE NEARLY WORKS
+        //
+    {
+
+        Log::info('selected entities', ['selectedEntities' => $this->selectedEntities]);
+        $structuredFields = $this->getStructuredFieldsByEntity();
+        Log::info('Structured fields by entity', $structuredFields);
+
+        // Flatten the structure: 'cc_items.name' => 'Item Name'
+        $flatLabels = collect($structuredFields)
+            ->flatMap(fn($fields) => collect($fields)->mapWithKeys(
+                fn($data, $fieldKey) => [$fieldKey => $data['label'] ?? '[Unknown field]']
+            ))
+            ->toArray();
+
+        $allowedKeys = array_keys($flatLabels);
+        Log::info('Allowed keys', ['allowedKeys' => $allowedKeys]);
+
+        $selectedEntityPrefixes = collect($this->selectedEntities)
+            ->map(fn($entity) => match ($entity) {
+                'ITEMS' => 'cc_items',
+                'DONORS' => 'cc_donors',
+                'LOCATIONS' => 'cc_locations',
+                'DONATIONS' => 'cc_donations',
+                default => null,
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $flatMappings = collect($this->structuredFieldMappings ?? [])
+            ->only($selectedEntityPrefixes)
+            ->flatMap(fn($fields, $entity) => collect($fields)->mapWithKeys(
+                fn($header, $field) => ["{$entity}.{$field}" => $header]
+            ))
+            ->toArray();
+
+        Log::info('Flat mappings', $flatMappings);
+
+        // Filter to only allowed keys and convert to grouped structure
+        $grouped = collect($flatMappings)
+            ->filter(fn($_header, $fieldKey) => in_array($fieldKey, $allowedKeys, true))
+            ->map(function ($header, $fieldKey) use ($flatLabels) {
+                return [
+                    'header' => $header,
+                    'fieldLabel' => $flatLabels[$fieldKey] ?? '[Unknown field]',
+                ];
+            })
+            ->groupBy(fn($_row, $fieldKey) => explode('.', $fieldKey)[0])
+            ->toArray();
+
+        Log::info('Final mapped columns by entity', ['grouped' => $grouped]);
+
+        return $grouped;
     }
 }
