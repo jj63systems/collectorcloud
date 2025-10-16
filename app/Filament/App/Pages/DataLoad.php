@@ -151,6 +151,9 @@ class DataLoad extends Page implements HasForms
                             'analysis_issues' => '',
                         ];
 
+                        // 👇 HARD-CODE SELECTED ENTITY
+                        $livewire->selectedEntities = ['ITEMS'];
+
                         Notification::make()
                             ->title('Analysing file...')
                             ->info()
@@ -233,7 +236,68 @@ class DataLoad extends Page implements HasForms
 
     public function submit(): void
     {
-        Notification::make()->title('Form submitted!')->success()->send();
+        $teamId = auth()->user()->current_team_id;
+
+        $fxxxMap = $this->getFxxxFieldAssignments();
+        Log::info('Fxxx field assignments', ['fxxxMap' => $fxxxMap]);
+
+        $rows = [];
+
+        foreach ($this->formData['parsedRows'] ?? [] as $row) {
+            $record = ['team_id' => $teamId];
+
+            // Step 3: Mapped known fields (cc_items.name, description, etc.)
+            foreach ($this->structuredFieldMappings['cc_items'] ?? [] as $field => $header) {
+                if (isset($row[$header])) {
+                    $record[$field] = $row[$header];
+                }
+            }
+
+            // Step 4: Unmapped fields → fxxx
+            foreach ($fxxxMap as $header => $fxxx) {
+                if (isset($row[$header])) {
+                    $record[$fxxx] = $row[$header];
+                }
+            }
+
+            $rows[] = $record;
+        }
+
+        Log::info('Prepared staging rows', ['rows' => $rows]);
+
+        // Step 1: gather all unique keys
+        $allKeys = collect($rows)
+            ->flatMap(fn($row) => array_keys($row))
+            ->unique()
+            ->values()
+            ->all();
+
+        // Step 2: normalize row structure
+        $normalizedRows = collect($rows)
+            ->map(function ($row) use ($allKeys) {
+                return collect($allKeys)
+                    ->mapWithKeys(fn($key) => [$key => $row[$key] ?? null])
+                    ->all();
+            })
+            ->all();
+
+        // Step 3: insert using Eloquent (tenant-aware)
+        \App\Models\Tenant\CcItemStage::insert($normalizedRows);
+
+        // Step 4: update field mappings for each fxxx used
+        foreach ($fxxxMap as $header => $fxxx) {
+            Log::info('Updating field mapping', ['header' => $header, 'fxxx' => $fxxx]);
+
+            \App\Models\Tenant\CcFieldMapping::updateOrCreate(
+                ['team_id' => $teamId, 'field_name' => $fxxx],
+                ['label' => $header, 'data_type' => 'TEXT']
+            );
+        }
+
+        Notification::make()
+            ->title('Items imported into staging')
+            ->success()
+            ->send();
     }
 
     public function runAnalysis(): void
@@ -278,9 +342,7 @@ class DataLoad extends Page implements HasForms
         $this->validationIssues = collect($analysis['validation_issues'] ?? [])
             ->mapWithKeys(function ($issues, $maybeNormalized) {
                 $normalized = $this->normalizeHeader($maybeNormalized);
-
                 $originalHeader = $this->headerMap[$normalized] ?? $maybeNormalized;
-
                 return [$originalHeader => $issues];
             })
             ->toArray();
@@ -290,19 +352,13 @@ class DataLoad extends Page implements HasForms
             'mapped_keys' => array_keys($this->validationIssues),
         ]);
 
-        $this->entities = collect($analysis['entities'] ?? [])
-            ->mapWithKeys(function ($entity) {
-                $key = strtoupper($entity['name'] ?? 'UNKNOWN');
-                $examples = $entity['examples'] ?? [];
-                return [$key => $entity['detected'] ? ($examples[0] ?? '—') : null];
-            })
-            ->toArray();
-
-        $this->selectedEntities = array_keys(array_filter($this->entities, fn($v) => !is_null($v)));
-
         $this->data['status'] = 'complete';
-
         $this->availableSpreadsheetHeaders = array_values($this->headerMap ?? []);
+
+        // 👇 Add this to populate unmappedFieldActions
+        $this->unmappedFieldActions = collect($this->getUnmappedSpreadsheetHeaders())
+            ->mapWithKeys(fn($header) => [$header => 'legacy'])
+            ->toArray();
 
         \Log::info('Analysis complete', ['rowsAnalysed' => $this->rowsAnalysed]);
     }
@@ -314,13 +370,32 @@ class DataLoad extends Page implements HasForms
 
         if ($ext === 'csv') {
             $lines = file($fullPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-            $header = array_shift($lines);
-            $rows = array_slice($lines, 0, 50); // Limit to 50 rows max
-            $text = implode("\n", [$header, ...$rows]);
+            $headerLine = array_shift($lines);
+
+            $header = str_getcsv($headerLine);
+            $rows = collect($lines)
+                ->map(fn($line) => str_getcsv($line))
+                ->filter(fn($row) => array_filter($row)) // skip blank rows
+                ->values()
+                ->all();
+
+            $parsedRows = collect($rows)
+                ->map(fn($row) => array_combine($header, $row))
+                ->filter(fn($r) => array_filter($r))
+                ->values()
+                ->all();
+
+            $this->formData['parsedRows'] = $parsedRows;
+
+            $sample = array_slice($parsedRows, 0, 50);
+
+            $text = collect([$header, ...$sample])
+                ->map(fn($r) => implode("\t", array_map('strval', $r)))
+                ->implode("\n");
 
             return [
                 'text' => Str::limit($text, 4000, '...'),
-                'rowsAnalysed' => count($rows),
+                'rowsAnalysed' => count($parsedRows),
             ];
         }
 
@@ -335,18 +410,34 @@ class DataLoad extends Page implements HasForms
                 $rows = $sheet->toArray();
 
                 $header = array_shift($rows);
-                $sample = array_slice($rows, 0, 50); // Limit to 50 rows max
+
+                $parsedRows = collect($rows)
+                    ->map(fn($row) => array_combine($header, $row))
+                    ->filter(fn($r) => array_filter($r)) // skip blank rows
+                    ->values()
+                    ->all();
+
+                $this->formData['parsedRows'] = $parsedRows;
+
                 $this->headerMap = collect($header)
                     ->mapWithKeys(fn($h) => [$this->normalizeHeader((string) $h) => (string) $h])
                     ->toArray();
+
+                $sample = array_slice($parsedRows, 0, 50);
 
                 $text = collect([$header, ...$sample])
                     ->map(fn($r) => implode("\t", array_map('strval', $r)))
                     ->implode("\n");
 
+                Log::info('Parsed full rows', [
+                    'total' => count($parsedRows),
+                    'blankSkipped' => count($rows) - count($parsedRows),
+                    'fromFile' => $ext,
+                ]);
+
                 return [
                     'text' => Str::limit($text, 4000, '...'),
-                    'rowsAnalysed' => count($sample),
+                    'rowsAnalysed' => count($parsedRows),
                 ];
             } catch (\Throwable $e) {
                 return [
@@ -370,23 +461,19 @@ class DataLoad extends Page implements HasForms
         }
 
         $prompt = <<<PROMPT
-You work in the archive team of a museum or similar organisation. You are given a spreadsheet of data - it is provided as raw content (tab-separated).
-NOTE: Only a subset of the data is included here.
-NOTE 2: This data is related to collections or archives — so the context is likely to involve entities such as donors, donations, items, and locations. Use this information to help identify the most likely purpose of each column.
-If a column appears to be a location (i.e., a place where an item may be found), look at the data content to see if there is a logical structure and suggest what it might represent. Apply this to the other columns found.
+You are a data analysis assistant working with archival item records. You are given a partial extract from a spreadsheet as tab-separated raw text.
+
+NOTE:
+- Only a sample of the uploaded data is shown.
+- Your task is to help interpret the likely meaning of each column.
+
 ---
 {$plainText}
 ---
 
 Tasks:
-1) Give a short high-level summary of the content in general terms - be clear that the analysis is based on only a small number of records sampled.
-2) List the columns and what each likely represents.
-3) From the following list of possible entities, assess whether each is effectively referenced in the data:
-   LOCATIONS, DONORS, DONATIONS, ITEMS.
-   For each, return:
-   - The entity name
-   - Whether it is detected in the data (true/false)
-   - One or two example values (if applicable)
+1) Write a short high-level summary describing the type of data you see. Be clear this is based on a partial sample.
+2) List each column found and explain what it likely represents.
 
 Respond EXACTLY as JSON:
 {
@@ -395,13 +482,7 @@ Respond EXACTLY as JSON:
     { "name": "...", "meaning": "..." }
   ],
   "validation_issues": {
-  },
-  "entities": [
-    { "name": "LOCATIONS", "detected": true, "examples": ["Room 1", "Hangar A"] },
-    { "name": "DONORS", "detected": false, "examples": [] },
-    { "name": "DONATIONS", "detected": true, "examples": ["Loan", "Gift"] },
-    { "name": "ITEMS", "detected": true, "examples": ["Radio", "Engine part"] }
-  ]
+  }
 }
 PROMPT;
 
@@ -416,12 +497,10 @@ PROMPT;
                 'response_format' => ['type' => 'json_object'],
             ]);
 
-//            \Log::info('Raw OpenAI response body: '.$response->body());
-
             $json = $response->json();
             $content = $json['choices'][0]['message']['content'] ?? '';
 
-            // Clean markdown-style code fences (e.g., ```json ... ```)
+            // Remove Markdown-style ```json code fences
             $content = trim($content);
             $content = preg_replace('/^```(?:json)?|```$/m', '', $content);
 
@@ -699,5 +778,24 @@ PROMPT;
         Log::info('Final mapped columns by entity', ['grouped' => $grouped]);
 
         return $grouped;
+    }
+
+    protected function getFxxxFieldAssignments(): array
+    {
+        // Deduplicate and sort unmapped spreadsheet headers
+        $headers = collect($this->unmappedFieldActions ?? [])
+            ->keys()
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        // Map deterministically to f001, f002, ...
+        return collect($headers)
+            ->mapWithKeys(function ($header, $index) {
+                $fieldName = sprintf('f%03d', $index + 1);
+                return [$header => $fieldName];
+            })
+            ->toArray();
     }
 }

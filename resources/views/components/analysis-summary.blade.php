@@ -84,44 +84,5 @@
     {{--    @endif--}}
 
     {{-- Entities Block --}}
-    @if (!empty($entities))
-        <x-filament::section>
-            <x-slot name="heading">
-                Entities
-            </x-slot>
-
-            <p class="text-sm text-gray-700 whitespace-pre-line">
-                Based on the analysis of the column headings and likely content, we think the following system entities
-                are represented or referenced within your upload. Please select those which you would like to import or
-                use.
-            </p>
-
-            @php
-                $checkboxFieldName = 'selectedEntities';
-            @endphp
-
-            <div class="mt-6">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    @foreach ($entities as $entity => $example)
-                        @php
-                            $inputId = 'entity-' . $loop->index;
-                        @endphp
-                        <label for="{{ $inputId }}"
-                               class="flex items-center gap-6 rounded-lg p-4 transition focus-within:ring-2 focus-within:ring-primary-500">
-                            <input
-                                id="{{ $inputId }}"
-                                type="checkbox"
-                                wire:model.defer="{{ $checkboxFieldName }}"
-                                value="{{ $entity }}"
-                                class="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                            />
-                            <span class="font-semibold uppercase text-gray-900">{{ $entity }}</span>
-                        </label>
-                    @endforeach
-                </div>
-            </div>
-
-        </x-filament::section>
-    @endif
 
 </div>
