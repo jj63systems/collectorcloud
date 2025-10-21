@@ -16,6 +16,7 @@ class CcItemStage extends Model
     // ------------------------------------------------------------------
     protected $fillable = [
         'team_id',
+        'data_load_id',
         'name',
         'item_key',
         'donation_id',

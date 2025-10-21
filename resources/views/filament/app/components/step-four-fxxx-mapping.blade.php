@@ -52,6 +52,7 @@
                             type="checkbox"
                             wire:model.defer="fxxxFieldSelections.{{ $header }}"
                             class="h-5 w-5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            @checked(!isset($this->fxxxFieldSelections[$header]) || $this->fxxxFieldSelections[$header])
                         />
                         <span class="text-sm text-gray-900">{{ $header }}</span>
                     </label>
@@ -60,4 +61,13 @@
         </x-filament::section>
     @endif
 
+    <div
+        wire:loading.delay
+        wire:target="submit"
+        class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center"
+    >
+        <div class="text-gray-700 text-lg font-semibold">
+            Processing your data... this may take a few moments.
+        </div>
+    </div>
 </div>

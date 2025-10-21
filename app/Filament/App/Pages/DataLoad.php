@@ -4,9 +4,13 @@ namespace App\Filament\App\Pages;
 
 use App\Filament\Traits\HasNavigationPermission;
 use App\Filament\Traits\HasResourcePermissions;
+use App\Jobs\ProcessDataLoad;
+use App\Models\Tenant\CcDataLoad;
+use App\Services\FieldStructureHelper;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\ViewField;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -211,6 +215,7 @@ class DataLoad extends Page implements HasForms
                                 'structuredEntities' => $this->getStructuredFieldsForSelectedEntities(),
                             ])
                             ->visible(fn() => filled($this->selectedEntities)),
+
                     ]),
 
                 // STEP 4 — Assign remaining columns to fxxx or ignore
@@ -224,6 +229,12 @@ class DataLoad extends Page implements HasForms
                                 'fieldLabels' => $this->getStructuredFieldsForSelectedEntities(),
                             ])
                             ->visible(fn() => filled($this->availableSpreadsheetHeaders)),
+
+                        Textarea::make('formData.notes')
+                            ->label('Notes about this data load')
+                            ->rows(3)
+                            ->placeholder('Enter any comments or context about this upload...')
+                            ->columnSpanFull(),
                     ]),
             ])
                 ->submitAction(
@@ -234,70 +245,74 @@ class DataLoad extends Page implements HasForms
         ];
     }
 
-    public function submit(): void
+
+    public function submit()
     {
         $teamId = auth()->user()->current_team_id;
+        $userId = auth()->id();
 
-        $fxxxMap = $this->getFxxxFieldAssignments();
-        Log::info('Fxxx field assignments', ['fxxxMap' => $fxxxMap]);
+        $parsedRows = $this->formData['parsedRows'] ?? [];
+        $rowCount = count($parsedRows);
 
-        $rows = [];
+        $this->structuredFieldMappings['fxxx'] = $this->getFxxxFieldAssignments();
 
-        foreach ($this->formData['parsedRows'] ?? [] as $row) {
-            $record = ['team_id' => $teamId];
+        Log::info('DataLoad::submit starting', [
+            'user_id' => $userId,
+            'team_id' => $teamId,
+            'rows' => $rowCount,
+            'filename' => $this->formData['upload_filename'] ?? 'Unknown',
+        ]);
 
-            // Step 3: Mapped known fields (cc_items.name, description, etc.)
-            foreach ($this->structuredFieldMappings['cc_items'] ?? [] as $field => $header) {
-                if (isset($row[$header])) {
-                    $record[$field] = $row[$header];
-                }
-            }
+        // Build payload for insert/update
+        $payload = [
+            'team_id' => $teamId,
+            'user_id' => $userId,
+            'filename' => $this->formData['upload_filename'] ?? 'Unknown file',
+            'worksheet_name' => $this->formData['sheetName'] ?? null,
+            'row_count' => $rowCount,
+            'status' => 'queued',
+            'uploaded_at' => now(),
+            'sample_rows' => json_encode($parsedRows),
+            'confirmed_field_mappings' => json_encode($this->structuredFieldMappings),
+        ];
 
-            // Step 4: Unmapped fields → fxxx
-            foreach ($fxxxMap as $header => $fxxx) {
-                if (isset($row[$header])) {
-                    $record[$fxxx] = $row[$header];
-                }
-            }
+        // Upsert by id if provided
+        $dataLoad = CcDataLoad::updateOrCreate(
+            ['id' => $this->formData['data_load_id'] ?? null],
+            $payload
+        );
 
-            $rows[] = $record;
-        }
 
-        Log::info('Prepared staging rows', ['rows' => $rows]);
+        Log::info('CcDataLoad upserted', [
+            'data_load_id' => $dataLoad->id,
+            'row_count' => $dataLoad->row_count,
+            'status' => $dataLoad->status,
+        ]);
 
-        // Step 1: gather all unique keys
-        $allKeys = collect($rows)
-            ->flatMap(fn($row) => array_keys($row))
-            ->unique()
-            ->values()
-            ->all();
+        $dataLoad->update([
+            'confirmed_field_mappings' => json_encode($this->structuredFieldMappings),
+            'sample_rows' => json_encode($this->formData['parsedRows'] ?? []),
+        ]);
 
-        // Step 2: normalize row structure
-        $normalizedRows = collect($rows)
-            ->map(function ($row) use ($allKeys) {
-                return collect($allKeys)
-                    ->mapWithKeys(fn($key) => [$key => $row[$key] ?? null])
-                    ->all();
-            })
-            ->all();
 
-        // Step 3: insert using Eloquent (tenant-aware)
-        \App\Models\Tenant\CcItemStage::insert($normalizedRows);
+        // Dispatch background job
+        ProcessDataLoad::dispatch($dataLoad->id);
 
-        // Step 4: update field mappings for each fxxx used
-        foreach ($fxxxMap as $header => $fxxx) {
-            Log::info('Updating field mapping', ['header' => $header, 'fxxx' => $fxxx]);
-
-            \App\Models\Tenant\CcFieldMapping::updateOrCreate(
-                ['team_id' => $teamId, 'field_name' => $fxxx],
-                ['label' => $header, 'data_type' => 'TEXT']
-            );
-        }
+        Log::info('ProcessDataLoad job dispatched', [
+            'job' => ProcessDataLoad::class,
+            'data_load_id' => $dataLoad->id,
+        ]);
 
         Notification::make()
-            ->title('Items imported into staging')
-            ->success()
+            ->title('Data load queued for processing')
+            ->info()
             ->send();
+
+//        $this->dispatch('redirectToStatusPage', id: $dataLoad->id);
+
+        return redirect()->to(
+            route('filament.app.pages.data-load-status').'?record='.$dataLoad->id
+        );
     }
 
     public function runAnalysis(): void
@@ -534,6 +549,8 @@ PROMPT;
 
         $storedPath = $upload->store('formattachments');
 
+        $this->formData['upload_filename'] = $upload->getClientOriginalName();
+
         if (!$storedPath) {
             \Log::error('Failed to store uploaded file');
             return;
@@ -633,7 +650,7 @@ PROMPT;
 
     protected function getStructuredFieldsForSelectedEntities(): array
     {
-        $all = $this->getStructuredFieldsByEntity();
+        $all = FieldStructureHelper::getStructuredFieldsByEntity();
 
         return collect($this->selectedEntities)
             ->filter(fn($entity) => isset($all[$entity]))
@@ -641,62 +658,6 @@ PROMPT;
             ->toArray();
     }
 
-    protected function getStructuredFieldsByEntity(): array
-    {
-        return [
-
-            'DONORS' => [
-                'cc_donors.name' => ['label' => 'Name', 'type' => 'string'],
-                'cc_donors.email' => ['label' => 'Email', 'type' => 'string'],
-                'cc_donors.telephone' => ['label' => 'Telephone', 'type' => 'string'],
-                'cc_donors.address_line_1' => ['label' => 'Address Line 1', 'type' => 'string'],
-                'cc_donors.address_line_2' => ['label' => 'Address Line 2', 'type' => 'string'],
-                'cc_donors.city' => ['label' => 'City', 'type' => 'string'],
-                'cc_donors.county' => ['label' => 'County', 'type' => 'string'],
-                'cc_donors.postcode' => ['label' => 'Postcode', 'type' => 'string'],
-                'cc_donors.country' => ['label' => 'Country', 'type' => 'string'],
-                'cc_donors.address_old' => ['label' => 'Legacy Address', 'type' => 'text'],
-            ],
-
-            'DONATIONS' => [
-//                'cc_donations.donor_id' => ['label' => 'Donor', 'type' => 'foreign'],
-                'cc_donations.donation_name' => ['label' => 'Donation Name', 'type' => 'string'],
-                'cc_donations.date_received' => ['label' => 'Date Received', 'type' => 'date'],
-                'cc_donations.donation_basis' => ['label' => 'Donation Basis', 'type' => 'string'],
-                'cc_donations.comments' => ['label' => 'Comments', 'type' => 'text'],
-                'cc_donations.accessioned_by' => ['label' => 'Accessioned By (User ID)', 'type' => 'foreign'],
-//                'cc_donations.donation_basis_old' => ['label' => 'Legacy Basis', 'type' => 'string'],
-//                'cc_donations.accessioned_by_old' => ['label' => 'Legacy Accessioned By', 'type' => 'string'],
-//                'cc_donations.donor_key_old' => ['label' => 'Legacy Donor Key', 'type' => 'string'],
-//                'cc_donations.year_received_old' => ['label' => 'Legacy Year Received', 'type' => 'string'],
-            ],
-
-            'ITEMS' => [
-                'cc_items.name' => ['label' => 'Item Name', 'type' => 'string'],
-                'cc_items.description' => ['label' => 'Description', 'type' => 'text'],
-//                'cc_items.donation_id' => ['label' => 'Donation', 'type' => 'foreign'],
-                'cc_items.date_received' => ['label' => 'Date Received', 'type' => 'date'],
-//                'cc_items.accessioned_at' => ['label' => 'Accessioned At', 'type' => 'date'],
-//                'cc_items.accessioned_by' => ['label' => 'Accessioned By (User ID)', 'type' => 'foreign'],
-//                'cc_items.filing_reference' => ['label' => 'Filing Reference', 'type' => 'string'],
-//                'cc_items.condition_notes' => ['label' => 'Condition Notes', 'type' => 'text'],
-//                'cc_items.curation_notes' => ['label' => 'Curation Notes', 'type' => 'text'],
-//                'cc_items.disposed' => ['label' => 'Disposed', 'type' => 'boolean'],
-//                'cc_items.disposed_date' => ['label' => 'Disposed Date', 'type' => 'date'],
-//                'cc_items.disposed_notes' => ['label' => 'Disposed Notes', 'type' => 'text'],
-//                'cc_items.inventory_status' => ['label' => 'Inventory Status', 'type' => 'string'],
-//                'cc_items.is_public' => ['label' => 'Is Public', 'type' => 'boolean'],
-            ],
-
-            'LOCATIONS' => [
-                'cc_locations.name' => ['label' => 'Location Name', 'type' => 'string'],
-//                'cc_locations.parent_id' => ['label' => 'Parent Location', 'type' => 'foreign'],
-//                'cc_locations.type_id' => ['label' => 'Location Type', 'type' => 'foreign'],
-//                'cc_locations.depth' => ['label' => 'Depth', 'type' => 'integer'],
-//                'cc_locations.path' => ['label' => 'Path', 'type' => 'string'],
-            ],
-        ];
-    }
 
     protected function getUnmappedSpreadsheetHeaders(): array
     {
@@ -729,7 +690,8 @@ PROMPT;
     {
 
         Log::info('selected entities', ['selectedEntities' => $this->selectedEntities]);
-        $structuredFields = $this->getStructuredFieldsByEntity();
+        $structuredFields = FieldStructureHelper::getStructuredFieldsByEntity();
+
         Log::info('Structured fields by entity', $structuredFields);
 
         // Flatten the structure: 'cc_items.name' => 'Item Name'
@@ -775,7 +737,7 @@ PROMPT;
             ->groupBy(fn($_row, $fieldKey) => explode('.', $fieldKey)[0])
             ->toArray();
 
-        Log::info('Final mapped columns by entity', ['grouped' => $grouped]);
+//        Log::info('Final mapped columns by entity', ['grouped' => $grouped]);
 
         return $grouped;
     }

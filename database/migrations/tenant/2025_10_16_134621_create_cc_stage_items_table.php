@@ -11,6 +11,13 @@ return new class extends Migration {
             $table->id();
 
             $table->text('team_id')->nullable();
+
+
+            $table->unsignedBigInteger('data_load_id')
+                ->nullable()
+                ->after('team_id')
+                ->index();
+
             $table->text('name')->nullable();
             $table->text('item_key')->nullable();
 
