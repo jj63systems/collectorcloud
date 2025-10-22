@@ -27,6 +27,8 @@ class CcDataLoad extends Model
         'notes',
         'sample_rows',
         'confirmed_field_mappings',
+        'validation_status',
+        'validation_progress',
     ];
 
     protected $casts = [

@@ -309,7 +309,6 @@ class DataLoad extends Page implements HasForms
             ->info()
             ->send();
 
-//        $this->dispatch('redirectToStatusPage', id: $dataLoad->id);
 
         return redirect()->to(
             route('filament.app.pages.data-load-status').'?record='.$dataLoad->id

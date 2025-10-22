@@ -2,11 +2,12 @@
 
 namespace App\Filament\App\Pages;
 
-use App\Filament\App\Resources\CcItemStages\CcItemStageResource;
+use App\Jobs\CommitStagedItemsJob;
+use App\Jobs\ValidateStagedItemsJob;
 use App\Models\Tenant\CcDataLoad;
+use App\Models\Tenant\CcItemStage;
 use Carbon\Carbon;
 use Filament\Pages\Page;
-
 
 class DataLoadStatus extends Page
 {
@@ -30,14 +31,67 @@ class DataLoadStatus extends Page
         $this->startTime = now();
     }
 
+
+    public function startValidation(): void
+    {
+        $this->dataLoad->update([
+            'validation_status' => 'validating',
+            'validation_progress' => 0,
+        ]);
+
+        ValidateStagedItemsJob::dispatch($this->dataLoad->id);
+    }
+
     public function pollStatus(): void
     {
         $this->dataLoad->refresh();
 
-        if ($this->dataLoad->status === 'completed') {
-            $this->redirect(
-                CcItemStageResource::getUrl().'?filters[data_load_id][value]='.$this->dataLoad->id
-            );
-        }
+//        if ($this->dataLoad->status === 'completed') {
+//            $this->redirect(
+//                CcItemStageResource::getUrl().'?filters[data_load_id][value]='.$this->dataLoad->id
+//            );
+//        }
+    }
+
+    public function getShouldPollProperty(): bool
+    {
+        return $this->dataLoad->status !== 'completed'
+            || $this->dataLoad->validation_status === 'validating';
+    }
+
+
+    public function discardUpload(): void
+    {
+        // Delete staged items and the data load record
+        CcItemStage::where('data_load_id', $this->dataLoad->id)->delete();
+        $this->dataLoad->delete();
+
+        // Redirect back to the data load wizard
+        $this->redirect(route('filament.app.pages.data-load'));
+    }
+
+
+    public function commitUpload(): void
+    {
+        CommitStagedItemsJob::dispatch($this->dataLoad->id);
+
+        \Filament\Notifications\Notification::make()
+            ->title('Commit job queued')
+            ->success()
+            ->send();
+    }
+
+    public function reviewErrors(): void
+    {
+        $baseUrl = \App\Filament\App\Resources\CcItemStages\CcItemStageResource::getUrl();
+
+        $queryString = http_build_query([
+            'filters' => [
+                'data_load_id' => ['value' => $this->dataLoad->id],
+                'has_data_error' => ['value' => true],
+            ],
+        ]);
+
+        $this->redirect($baseUrl.'?'.$queryString);
     }
 }

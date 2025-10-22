@@ -15,8 +15,10 @@ return new class extends Migration {
 
             $table->unsignedBigInteger('data_load_id')
                 ->nullable()
-                ->after('team_id')
                 ->index();
+
+            $table->boolean('has_data_error')->default(false);
+            $table->text('data_error_summary')->nullable();
 
             $table->text('name')->nullable();
             $table->text('item_key')->nullable();

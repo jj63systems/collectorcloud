@@ -11,8 +11,10 @@ use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+
 
 class CcItemStagesTable
 {
@@ -47,7 +49,7 @@ class CcItemStagesTable
         $filters = [];
         $teamId = Auth::user()?->current_team_id;
 
-        // ✅ Add filter for Data Load Run
+        // Add filters for data load
         $filters[] = SelectFilter::make('data_load_id')
             ->label('Data Load Run')
             ->options(
@@ -64,6 +66,14 @@ class CcItemStagesTable
             )
             ->searchable()
             ->preload();
+
+
+        $filters[] = TernaryFilter::make('has_data_error')
+            ->label('Has Errors')
+            ->placeholder('Any')
+            ->trueLabel('Only rows with errors')
+            ->falseLabel('Only valid rows');
+
 
         // ✅ Load dynamic field mappings for current team
         if ($teamId) {
@@ -142,7 +152,7 @@ class CcItemStagesTable
             })
             ->columns($columns)
             ->filters($filters)
-            ->filtersFormColumns(2)
+            ->filtersFormColumns(1)
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersTriggerAction(null)
             ->recordActions([

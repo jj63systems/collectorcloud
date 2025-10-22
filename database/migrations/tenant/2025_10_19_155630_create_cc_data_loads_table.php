@@ -30,6 +30,10 @@ return new class extends Migration {
                 'failed',       // errored
             ])->default('staged')->index();
 
+            $table->string('validation_status')->nullable(); // e.g., pending, validating, complete
+            $table->integer('validation_progress')->default(0); // percentage
+
+
             $table->integer('row_count')->nullable();
             $table->unsignedInteger('rows_processed')->default(0);
 
