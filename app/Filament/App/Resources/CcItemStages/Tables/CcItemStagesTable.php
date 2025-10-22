@@ -142,6 +142,7 @@ class CcItemStagesTable
             })
             ->columns($columns)
             ->filters($filters)
+            ->filtersFormColumns(2)
             ->filtersLayout(FiltersLayout::AboveContent)
             ->filtersTriggerAction(null)
             ->recordActions([

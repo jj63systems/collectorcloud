@@ -26,7 +26,7 @@
                     {{ $dataLoad->rows_processed }} / {{ $dataLoad->row_count }} rows processed
                 </p>
                 <p class="text-sm text-gray-600">
-                    Elapsed time: {{ now()->diffInSeconds($startTime) }}s
+                    Elapsed time: {{ round(abs($startTime->diffInSeconds(now())), 0) }}s
                 </p>
             </div>
         @else
