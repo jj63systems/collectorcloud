@@ -273,6 +273,7 @@ class DataLoad extends Page implements HasForms
             'status' => 'queued',
             'uploaded_at' => now(),
             'sample_rows' => json_encode($parsedRows),
+            'notes' => $this->formData['notes'] ?? null,
             'confirmed_field_mappings' => json_encode($this->structuredFieldMappings),
         ];
 

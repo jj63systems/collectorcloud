@@ -67,7 +67,7 @@
         class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center"
     >
         <div class="text-gray-700 text-lg font-semibold">
-            Processing your data... this may take a few moments.
+            Please wait while we prepare the request for background processing...
         </div>
     </div>
 </div>
