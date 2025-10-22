@@ -56,10 +56,10 @@ class ValidateStagedItemsJob implements ShouldQueue
             ]);
         }
 
-//        $dataLoad->update([
-//            'validation_status' => 'complete',
-//            'validation_progress' => 100,
-//        ]);
+        $dataLoad->update([
+            'validation_status' => 'complete',
+            'validation_progress' => 100,
+        ]);
 
         Log::info('ValidateStagedItemsJob complete', ['data_load_id' => $this->dataLoadId]);
     }

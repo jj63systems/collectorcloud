@@ -2,6 +2,17 @@
     <div class="space-y-4">
         <h2 class="text-xl font-bold">Import Status</h2>
 
+        <div class="mt-2">
+            <label for="dataLoadSelect" class="block text-sm font-medium text-gray-700">Select Data Load Run:</label>
+            <select id="dataLoadSelect" wire:model.live="selectedDataLoadId"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
+                @foreach ($dataLoadOptions as $id => $label)
+                    <option value="{{ $id }}">{{ $label }}</option>
+                @endforeach
+            </select>
+
+        </div>
+
         <p class="text-gray-600">
             <strong>File:</strong> {{ $dataLoad->filename }}
         </p>

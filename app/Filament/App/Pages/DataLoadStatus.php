@@ -13,7 +13,7 @@ class DataLoadStatus extends Page
 {
     public ?CcDataLoad $dataLoad = null;
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
 
     protected string $view = 'filament.app.pages.data-load-status';
 
@@ -24,13 +24,40 @@ class DataLoadStatus extends Page
     public ?Carbon $startTime = null;
 
 
+    public ?int $selectedDataLoadId = null;
+    public array $dataLoadOptions = [];
+    public bool $shouldPoll = true;
+
     public function mount(): void
     {
-        $record = request()->query('record');
-        $this->dataLoad = CcDataLoad::findOrFail($record);
-        $this->startTime = now();
-    }
+        $recordId = request()->query('record');
 
+        if ($recordId) {
+            $this->dataLoad = \App\Models\Tenant\CcDataLoad::findOrFail($recordId);
+        } else {
+            $this->dataLoad = \App\Models\Tenant\CcDataLoad::where('team_id', auth()->user()->current_team_id)
+                ->orderByDesc('id')
+                ->firstOrFail();
+
+            $this->shouldPoll =
+                $this->dataLoad->status !== 'completed' ||
+                $this->dataLoad->validation_status === 'validating';
+        }
+
+        $this->startTime = now();
+
+        $this->dataLoadOptions = \App\Models\Tenant\CcDataLoad::where('team_id', auth()->user()->current_team_id)
+            ->orderByDesc('id')
+            ->get()
+            ->mapWithKeys(function ($d) {
+                $uploadedAt = \Carbon\Carbon::parse($d->uploaded_at)->format('Y-m-d H:i');
+                $label = "{$d->id} / {$d->filename} / {$d->worksheet_name} / {$uploadedAt}";
+                return [$d->id => $label];
+            })
+            ->toArray();
+
+        $this->selectedDataLoadId = $this->dataLoad->id;
+    }
 
     public function startValidation(): void
     {
@@ -93,5 +120,17 @@ class DataLoadStatus extends Page
         ]);
 
         $this->redirect($baseUrl.'?'.$queryString);
+    }
+
+    public function updatedSelectedDataLoadId(): void
+    {
+        \Log::info('Dropdown changed to: '.$this->selectedDataLoadId);
+
+        $this->dataLoad = CcDataLoad::findOrFail($this->selectedDataLoadId);
+        $this->startTime = now();
+
+        $this->shouldPoll =
+            $this->dataLoad->status !== 'completed' ||
+            $this->dataLoad->validation_status === 'validating';
     }
 }
