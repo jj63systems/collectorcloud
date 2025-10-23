@@ -434,7 +434,8 @@ class DataLoad extends Page implements HasForms
                 $rows = $sheet->toArray();
 
                 $header = array_shift($rows);
-                $header = array_map('trim', $header);
+
+                $header = array_map(fn($h) => trim((string) $h), $header);
 
                 // ❗ Filter out empty header columns
                 $validHeaderIndexes = collect($header)
