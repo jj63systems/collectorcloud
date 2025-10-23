@@ -227,6 +227,8 @@ class DataLoad extends Page implements HasForms
                                 'mappedSpreadsheetHeaders' => $this->getMappedSpreadsheetHeaders(),
                                 'mappedSpreadsheetHeadersByEntity' => $this->getConfirmedMappingsByEntity(),
                                 'fieldLabels' => $this->getStructuredFieldsForSelectedEntities(),
+                                'fxxxMappings' => $this->getFxxxMappingsTable(),
+
                             ])
                             ->visible(fn() => filled($this->availableSpreadsheetHeaders)),
 
@@ -668,26 +670,46 @@ PROMPT;
 
     protected function getStructuredFieldsForSelectedEntities(): array
     {
-        $all = FieldStructureHelper::getStructuredFieldsByEntity();
-
-        return collect($this->selectedEntities)
-            ->filter(fn($entity) => isset($all[$entity]))
-            ->mapWithKeys(fn($entity) => [$entity => $all[$entity]])
+        $structuredFields = FieldStructureHelper::getStructuredFieldsByEntity();
+        // Only include selected entities
+        $filtered = collect($this->selectedEntities)
+            ->mapWithKeys(fn($entity) => [$entity => $structuredFields[$entity] ?? []])
             ->toArray();
-    }
 
+        // ✅ Add labelled fxxx fields as a separate 'FLEX FIELDS' group
+        $teamId = auth()->user()->current_team_id;
+        $labelledFxxxFields = \App\Models\Tenant\CcFieldMapping::query()
+            ->where('team_id', $teamId)
+            ->where('field_name', 'like', 'f%')
+            ->whereNotNull('label')
+            ->orderBy('field_name')
+            ->get();
+
+        if ($labelledFxxxFields->isNotEmpty()) {
+            $filtered['FLEX FIELDS'] = $labelledFxxxFields->mapWithKeys(function ($mapping) {
+                return [
+                    $mapping->field_name => [
+                        'label' => $mapping->label,
+                        'type' => 'text', // or $mapping->data_type if you’re storing that
+                        'required' => false,
+                        'is_flex' => true,
+                    ]
+                ];
+            })->toArray();
+        }
+
+        return $filtered;
+    }
 
     protected function getUnmappedSpreadsheetHeaders(): array
     {
         $allHeaders = $this->availableSpreadsheetHeaders ?? [];
 
-        // Flatten all used values from structured mappings (e.g. 'Title', 'Description', etc.)
         $usedHeaders = collect($this->structuredFieldMappings ?? [])
-            ->flatMap(fn($mappings) => array_values($mappings))
+            ->values()
             ->filter()
             ->unique()
-            ->values()
-            ->all();
+            ->toArray();
 
         return array_values(array_filter(
             $allHeaders,
@@ -777,5 +799,28 @@ PROMPT;
                 return [$header => $fieldName];
             })
             ->toArray();
+    }
+
+
+    public function getFxxxMappingsTable(): array
+    {
+//        Log::info('getFxxxMappingsTable', [
+//            'confirmedFieldMappings' => $this->confirmedFieldMappings,
+//            'availableSpreadsheetHeaders' => $this->availableSpreadsheetHeaders,
+//        ]);
+
+        $mapped = collect($this->confirmedFieldMappings ?? []);
+        $remaining = collect($this->availableSpreadsheetHeaders ?? [])
+            ->reject(fn($col) => $mapped->contains($col))
+            ->values();
+
+        $result = $remaining->map(fn($header, $i) => [
+            'column' => $header,
+            'field' => 'f'.str_pad($i + 1, 3, '0', STR_PAD_LEFT),
+        ])->all();
+
+        Log::info('Resulting fxxxMappings', $result);
+
+        return $result;
     }
 }
