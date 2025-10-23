@@ -34,7 +34,7 @@ class CcFieldMappingResource extends Resource
         return 'cc_field_mappings.view';
     }
 
-    protected static ?string $navigationLabel = 'System > Catalogue Fields Setup';
+    protected static ?string $navigationLabel = 'Setup > Catalogue Fields';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
 //    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

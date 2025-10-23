@@ -2,6 +2,7 @@
 
 namespace App\Filament\App\Pages;
 
+use App\Filament\App\Resources\CcItemStages\CcItemStageResource;
 use App\Jobs\CommitStagedItemsJob;
 use App\Jobs\ValidateStagedItemsJob;
 use App\Models\Tenant\CcDataLoad;
@@ -29,18 +30,9 @@ class DataLoadStatus extends Page
 
     public function mount(): void
     {
-        $recordId = request()->query('record');
+        $teamId = auth()->user()->current_team_id;
 
-        $this->dataLoad = $recordId
-            ? CcDataLoad::findOrFail($recordId)
-            : CcDataLoad::where('team_id', auth()->user()->current_team_id)
-                ->orderByDesc('id')
-                ->firstOrFail();
-
-        $this->selectedDataLoadId = $this->dataLoad->id;
-        $this->startTime = now();
-
-        $this->dataLoadOptions = CcDataLoad::where('team_id', auth()->user()->current_team_id)
+        $this->dataLoadOptions = CcDataLoad::where('team_id', $teamId)
             ->orderByDesc('id')
             ->get()
             ->mapWithKeys(function ($d) {
@@ -49,10 +41,28 @@ class DataLoadStatus extends Page
                 return [$d->id => $label];
             })
             ->toArray();
+
+        if (empty($this->dataLoadOptions)) {
+            $this->dataLoad = null;
+            $this->selectedDataLoadId = null;
+            return;
+        }
+
+        $recordId = request()->query('record');
+        $this->dataLoad = $recordId
+            ? CcDataLoad::findOrFail($recordId)
+            : CcDataLoad::where('team_id', $teamId)->orderByDesc('id')->first();
+
+        $this->selectedDataLoadId = $this->dataLoad->id;
+        $this->startTime = now();
     }
 
     public function getShouldPollProperty(): bool
     {
+        if (!$this->dataLoad) {
+            return false;
+        }
+
         return $this->dataLoad->status !== 'completed'
             || $this->dataLoad->validation_status === 'validating';
     }
@@ -67,6 +77,10 @@ class DataLoadStatus extends Page
 
     public function startValidation(): void
     {
+        if (!$this->dataLoad) {
+            return;
+        }
+
         $this->dataLoad->update([
             'validation_status' => 'validating',
             'validation_progress' => 0,
@@ -77,13 +91,16 @@ class DataLoadStatus extends Page
 
     public function pollStatus(): void
     {
+        if (!$this->dataLoad) {
+            return;
+        }
+
         $this->dataLoad->refresh();
 
-        // Logging optional; not necessary anymore for polling control
         if (
             $this->dataLoad->status === 'completed' &&
             (
-                $this->dataLoad->validation_status === 'complete' ||
+                $this->dataLoad->validation_status === 'completed' ||
                 (int) $this->dataLoad->validation_progress >= 100
             )
         ) {
@@ -93,6 +110,10 @@ class DataLoadStatus extends Page
 
     public function discardUpload(): void
     {
+        if (!$this->dataLoad) {
+            return;
+        }
+
         CcItemStage::where('data_load_id', $this->dataLoad->id)->delete();
         $this->dataLoad->delete();
 
@@ -101,6 +122,10 @@ class DataLoadStatus extends Page
 
     public function commitUpload(): void
     {
+        if (!$this->dataLoad) {
+            return;
+        }
+
         CommitStagedItemsJob::dispatch($this->dataLoad->id);
 
         \Filament\Notifications\Notification::make()
@@ -109,14 +134,18 @@ class DataLoadStatus extends Page
             ->send();
     }
 
-    public function reviewErrors(): void
+    public function viewData(): void
     {
-        $baseUrl = \App\Filament\App\Resources\CcItemStages\CcItemStageResource::getUrl();
+        if (!$this->dataLoad) {
+            return;
+        }
+
+        $baseUrl = CcItemStageResource::getUrl();
 
         $queryString = http_build_query([
             'filters' => [
                 'data_load_id' => ['value' => $this->dataLoad->id],
-                'has_data_error' => ['value' => true],
+                'has_data_error' => ['value' => false],
             ],
         ]);
 

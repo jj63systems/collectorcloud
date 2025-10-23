@@ -12,19 +12,20 @@
                 @foreach ($mappedSpreadsheetHeadersByEntity as $entity => $rows)
                     @if (!empty($rows))
                         <div>
-                            <div class="text-sm font-semibold text-gray-800 mb-1">{{ $entity }}</div>
                             <table class="w-full text-sm text-left border-collapse">
                                 <thead>
                                 <tr>
-                                    <th class="pr-4 pb-1 text-gray-500 font-medium">Your Column</th>
-                                    <th class="pb-1 text-gray-500 font-medium">Mapped To</th>
+                                    <th class="pb-1 text-gray-500 font-medium">Database field</th>
+                                    <th class="pr-4 pb-1 text-gray-500 font-medium">Your spreadsheet column</th>
+
                                 </tr>
                                 </thead>
                                 <tbody>
                                 @foreach ($rows as $row)
                                     <tr>
-                                        <td class="pr-4 text-gray-900">{{ $row['header'] }}</td>
                                         <td class="text-gray-700">{{ $row['fieldLabel'] }}</td>
+                                        <td class="pr-4 text-gray-900">{{ $row['header'] }}</td>
+
                                     </tr>
                                 @endforeach
                                 </tbody>
@@ -42,7 +43,7 @@
             <x-slot name="heading">Assign Remaining Columns</x-slot>
             <p class="text-sm text-gray-700">
                 The following spreadsheet columns have not yet been mapped. Select the ones you’d like to include;
-                they’ll be automatically assigned to system-defined extension fields (f001–fxxx):
+                we will automatically generate new column definitions for these in the database.
             </p>
 
             <div class="mt-4 space-y-3">
@@ -61,13 +62,5 @@
         </x-filament::section>
     @endif
 
-    <div
-        wire:loading.delay
-        wire:target="submit"
-        class="fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center"
-    >
-        <div class="text-gray-700 text-lg font-semibold">
-            Please wait while we prepare the request for background processing...
-        </div>
-    </div>
+
 </div>

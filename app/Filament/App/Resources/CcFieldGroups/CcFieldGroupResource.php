@@ -33,7 +33,7 @@ class CcFieldGroupResource extends Resource
         return 'cc_field_groups.view';
     }
 
-    protected static ?string $navigationLabel = 'System > Catalogue Field Groups';
+    protected static ?string $navigationLabel = 'Setup > Catalogue Field Groups';
 
     // ✅ Icon in navigation (any Blade Heroicon or Lucide icon name)
 //    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;

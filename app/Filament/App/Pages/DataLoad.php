@@ -295,7 +295,10 @@ class DataLoad extends Page implements HasForms
             'sample_rows' => json_encode($this->formData['parsedRows'] ?? []),
         ]);
 
-
+        Notification::make()
+            ->title('Data load queued for processing - please be patient')
+            ->info()
+            ->send();
         // Dispatch background job
         ProcessDataLoad::dispatch($dataLoad->id);
 
@@ -303,11 +306,6 @@ class DataLoad extends Page implements HasForms
             'job' => ProcessDataLoad::class,
             'data_load_id' => $dataLoad->id,
         ]);
-
-        Notification::make()
-            ->title('Data load queued for processing')
-            ->info()
-            ->send();
 
 
         return redirect()->to(
@@ -383,37 +381,48 @@ class DataLoad extends Page implements HasForms
         $ext = pathinfo($path, PATHINFO_EXTENSION);
         $fullPath = Storage::disk('local')->path($path);
 
+        // --- CSV HANDLING --------------------------------------------------
         if ($ext === 'csv') {
             $lines = file($fullPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             $headerLine = array_shift($lines);
 
-            $header = str_getcsv($headerLine);
+            $header = array_map('trim', str_getcsv($headerLine));
+
+            // ❗ Ignore blank headers
+            $validHeaderIndexes = collect($header)
+                ->map(fn($h, $i) => strlen(trim($h)) > 0 ? $i : null)
+                ->filter(fn($i) => !is_null($i))
+                ->values()
+                ->all();
+
+            $header = array_values(array_filter($header, fn($h) => strlen(trim($h)) > 0));
+
             $rows = collect($lines)
                 ->map(fn($line) => str_getcsv($line))
-                ->filter(fn($row) => array_filter($row)) // skip blank rows
-                ->values()
-                ->all();
-
-            $parsedRows = collect($rows)
+                ->map(fn($row) => array_intersect_key($row, array_flip($validHeaderIndexes))) // keep only valid columns
                 ->map(fn($row) => array_combine($header, $row))
-                ->filter(fn($r) => array_filter($r))
+                ->filter(fn($r) => array_filter($r)) // skip blank rows
                 ->values()
                 ->all();
 
-            $this->formData['parsedRows'] = $parsedRows;
+            $this->formData['parsedRows'] = $rows;
 
-            $sample = array_slice($parsedRows, 0, 50);
+            $this->headerMap = collect($header)
+                ->mapWithKeys(fn($h) => [$this->normalizeHeader((string) $h) => (string) $h])
+                ->toArray();
 
+            $sample = array_slice($rows, 0, 50);
             $text = collect([$header, ...$sample])
                 ->map(fn($r) => implode("\t", array_map('strval', $r)))
                 ->implode("\n");
 
             return [
                 'text' => Str::limit($text, 4000, '...'),
-                'rowsAnalysed' => count($parsedRows),
+                'rowsAnalysed' => count($rows),
             ];
         }
 
+        // --- XLS / XLSX HANDLING ------------------------------------------
         if (in_array($ext, ['xls', 'xlsx'])) {
             try {
                 $reader = IOFactory::createReaderForFile($fullPath);
@@ -425,21 +434,30 @@ class DataLoad extends Page implements HasForms
                 $rows = $sheet->toArray();
 
                 $header = array_shift($rows);
+                $header = array_map('trim', $header);
+
+                // ❗ Filter out empty header columns
+                $validHeaderIndexes = collect($header)
+                    ->map(fn($h, $i) => strlen(trim($h)) > 0 ? $i : null)
+                    ->filter(fn($i) => !is_null($i))
+                    ->values()
+                    ->all();
+
+                $header = array_values(array_filter($header, fn($h) => strlen(trim($h)) > 0));
 
                 $parsedRows = collect($rows)
+                    ->map(fn($row) => array_intersect_key($row, array_flip($validHeaderIndexes)))
                     ->map(fn($row) => array_combine($header, $row))
                     ->filter(fn($r) => array_filter($r)) // skip blank rows
                     ->values()
                     ->all();
 
                 $this->formData['parsedRows'] = $parsedRows;
-
                 $this->headerMap = collect($header)
                     ->mapWithKeys(fn($h) => [$this->normalizeHeader((string) $h) => (string) $h])
                     ->toArray();
 
                 $sample = array_slice($parsedRows, 0, 50);
-
                 $text = collect([$header, ...$sample])
                     ->map(fn($r) => implode("\t", array_map('strval', $r)))
                     ->implode("\n");
@@ -447,6 +465,7 @@ class DataLoad extends Page implements HasForms
                 Log::info('Parsed full rows', [
                     'total' => count($parsedRows),
                     'blankSkipped' => count($rows) - count($parsedRows),
+                    'ignoredEmptyHeaders' => count(array_diff_key($rows[0] ?? [], array_flip($validHeaderIndexes))),
                     'fromFile' => $ext,
                 ]);
 
@@ -462,6 +481,7 @@ class DataLoad extends Page implements HasForms
             }
         }
 
+        // --- DEFAULT -------------------------------------------------------
         return [
             'text' => 'Unsupported file type.',
             'rowsAnalysed' => 0,
@@ -585,9 +605,6 @@ PROMPT;
 
     public function processUploadedFileInfo($upload): void
     {
-
-//        ini_set('memory_limit', '512M');
-
         $this->sheetNames = [];
 
         if (!$upload instanceof TemporaryUploadedFile) {
@@ -601,7 +618,7 @@ PROMPT;
             try {
                 $reader = IOFactory::createReaderForFile($fullPath);
                 $spreadsheet = $reader->load($fullPath);
-                $this->sheetNames = $spreadsheet->getSheetNames();
+                $this->sheetNames = array_filter($spreadsheet->getSheetNames(), fn($n) => !empty(trim($n)));
 
                 if (count($this->sheetNames) === 1) {
                     $this->formData['sheetName'] = $this->sheetNames[0];

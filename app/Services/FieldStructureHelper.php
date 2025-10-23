@@ -30,14 +30,39 @@ class FieldStructureHelper
             ],
 
             'ITEMS' => [
+                // Core identifiers
+                'cc_items.item_key' => ['label' => 'Item Key', 'type' => 'string'],
                 'cc_items.name' => ['label' => 'Item Name', 'type' => 'string'],
-                'cc_items.description' => ['label' => 'Description', 'type' => 'text'],
+
+                // Relationships
+                'cc_items.donation_id' => ['label' => 'Donated by', 'type' => 'string'],
+                'cc_items.location_id' => ['label' => 'Location', 'type' => 'string'],
+
+                // Dates and users
                 'cc_items.date_received' => ['label' => 'Date Received', 'type' => 'date'],
-            ],
+                'cc_items.accessioned_at' => ['label' => 'Accessioned At', 'type' => 'date'],
+                'cc_items.accessioned_by' => ['label' => 'Accessioned By', 'type' => 'string'],
+                'cc_items.checked_by_user_id' => ['label' => 'Checked By', 'type' => 'string'],
+
+                // Descriptions & notes
+                'cc_items.description' => ['label' => 'Description', 'type' => 'text'],
+                'cc_items.filing_reference' => ['label' => 'Filing Reference', 'type' => 'string'],
+                'cc_items.condition_notes' => ['label' => 'Condition Notes', 'type' => 'text'],
+                'cc_items.curation_notes' => ['label' => 'Curation Notes', 'type' => 'text'],
+
+                // Lifecycle flags
+                'cc_items.disposed' => ['label' => 'Disposed', 'type' => 'boolean'],
+                'cc_items.disposed_date' => ['label' => 'Disposed Date', 'type' => 'date'],
+                'cc_items.disposed_notes' => ['label' => 'Disposed Notes', 'type' => 'text'],
+
+                // Optional status fields
+                'cc_items.inventory_status' => ['label' => 'Inventory Status', 'type' => 'string'],
+                'cc_items.is_public' => ['label' => 'Is Public', 'type' => 'boolean'],
+            ], // ✅ Missing closing bracket + comma fixed here
 
             'LOCATIONS' => [
                 'cc_locations.name' => ['label' => 'Location Name', 'type' => 'string'],
             ],
-        ];
+        ]; // ✅ Missing semicolon added here
     }
 }

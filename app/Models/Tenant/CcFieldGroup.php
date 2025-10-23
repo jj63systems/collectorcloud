@@ -16,6 +16,7 @@ class CcFieldGroup extends Model
         'name',
         'display_seq',
         'is_protected',
+        'team_id'
     ];
 
     public function fieldMappings(): HasMany
