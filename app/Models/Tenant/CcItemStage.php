@@ -36,6 +36,22 @@ class CcItemStage extends Model
         'is_public',
     ];
 
+
+    public function itemStages()
+    {
+        return $this->hasMany(\App\Models\Tenant\CcItemStage::class, 'data_load_id');
+    }
+
+    public function hasValidationErrors(): bool
+    {
+        return $this->itemStages()->where('has_data_error', true)->exists();
+    }
+
+    public function validationErrorCount(): int
+    {
+        return $this->itemStages()->where('has_data_error', true)->count();
+    }
+
     // Append all f001–f999 columns dynamically
     public function __construct(array $attributes = [])
     {

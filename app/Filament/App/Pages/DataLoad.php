@@ -195,11 +195,11 @@ class DataLoad extends Page implements HasForms
                                 'entities' => $this->entities,
                                 'rowsAnalysed' => $this->rowsAnalysed,
                             ])
-                            ->visible(fn() => $this->data['status'] === 'complete'),
+                            ->visible(fn() => $this->data['status'] === 'completed'),
 
                         TextEntry::make('data.analysis_loader')
                             ->state('⏳ Analysing file, please wait...')
-                            ->visible(fn() => $this->data['status'] !== 'complete')
+                            ->visible(fn() => $this->data['status'] !== 'completed')
                             ->extraAttributes([
                                 'class' => 'animate-pulse bg-gray-100 rounded-md p-2 mb-4 text-sm',
                             ])
@@ -321,7 +321,7 @@ class DataLoad extends Page implements HasForms
 
         if (!$this->storedAttachmentPath) {
             $set('data.analysis_summary', 'Error: No uploaded file to process.');
-            $this->data['status'] = 'complete';
+            $this->data['status'] = 'completed';
             return;
         }
 
@@ -334,7 +334,7 @@ class DataLoad extends Page implements HasForms
         if (isset($analysis['error'])) {
             \Log::info('OpenAI analysis error', ['error' => $analysis['error']]);
             $set('data.analysis_summary', 'OpenAI Error: '.$analysis['error']);
-            $this->data['status'] = 'complete';
+            $this->data['status'] = 'completed';
             return;
         }
 
@@ -367,7 +367,7 @@ class DataLoad extends Page implements HasForms
             'mapped_keys' => array_keys($this->validationIssues),
         ]);
 
-        $this->data['status'] = 'complete';
+        $this->data['status'] = 'completed';
         $this->availableSpreadsheetHeaders = array_values($this->headerMap ?? []);
 
         // 👇 Add this to populate unmappedFieldActions

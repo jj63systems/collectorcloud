@@ -37,6 +37,12 @@ class CcDataLoad extends Model
         'updated_at' => 'datetime',
     ];
 
+
+    public function hasValidationErrors(): bool
+    {
+        return $this->error_count > 0;
+    }
+
     public function team(): BelongsTo
     {
         return $this->belongsTo(CcTeam::class);
